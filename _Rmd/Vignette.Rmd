@@ -1,0 +1,27 @@
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.path = "../images/")
+```
+
+
+```{r, include = FALSE, eval=FALSE}
+rmarkdown::render("_Rmd/Vignette.Rmd", 
+          output_format = "github_document", 
+          output_dir = getwd(),
+          output_file = "README.md",
+          output_options = list(html_preview = FALSE)
+          )
+```
+
+## Test
+
+Test
+
+
+## Example R Markdown Output
+
+```{r}
+plot(iris)
+```
+
+
