@@ -13,15 +13,77 @@ rmarkdown::render("_Rmd/Vignette.Rmd",
           )
 ```
 
-## Test
+# Interacting with Crypto API
 
-Test
+# Requirements
 
+```{r requirements, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(jsonlite)
+library(knitr)
+APIkey="r87x5acIqxjYxZWZ31xO3dxUjQGVlja6"
+```
 
-## Example R Markdown Output
+# Functions to Interact with API
+
+## `getExchange` 
+
+Description: Function to get Crypto Exchanges Data
+Input: None
+Output: Returns a table of exchange data information
+
+```{r exchange}
+getExchange <- function(){
+baseURL <- "https://api.polygon.io/v1/meta/crypto-exchanges/"
+key <- paste0("?apiKey=", APIkey)
+URL <- paste0(baseURL, key)
+
+exchangeData <- fromJSON(URL)
+
+return(exchangeData)
+}
+
+kable(getExchange())
+```
 
 ```{r}
-plot(iris)
+## -----------------------------------------
+baseURL <- "https://api.polygon.io/v2/aggs/ticker/"
+ticker <- paste0("X:", "BTCUSD", "/")
+range <- "range/1/day/"
+day1 <- "2021-01-01/"
+day2 <- "2021-09-20"
+otherSettings <- "?adjusted=true&sort=asc&limit=365"
+key <- "&apikey=r87x5acIqxjYxZWZ31xO3dxUjQGVlja6"
+URL <- paste0(baseURL, ticker, range, day1, day2, otherSettings, key)
+
+rawData <- fromJSON(URL)
+
+dayStart <- as.Date(day1)
+dayEnd <- as.Date(day2)
+numDays <- dayEnd - dayStart + 1
+
+
+cryptoData <- as.data.frame(rawData["results"])
+change1Day <- (cryptoData$results.c[263] - cryptoData$results.c[262]) / cryptoData$results.c[262]
+change7Day <- (cryptoData$results.c[263] - cryptoData$results.c[256]) / cryptoData$results.c[256]
+change30Day <-(cryptoData$results.c[263] - cryptoData$results.c[233]) / cryptoData$results.c[233]
+
+kable(c(cryptoData$results.c[263], change1Day, change7Day, change30Day))
+  
+
+
+plot(x=dayStart:dayEnd, y=cryptoData$results.c)
+
+
+# cryptoData %>%
 ```
+
+
+# Data Exploration
+
+
+
+
 
 
