@@ -1,4 +1,13 @@
 
+  - [Interacting with Crypto API](#interacting-with-crypto-api)
+  - [Requirements](#requirements)
+  - [Functions to Interact with API](#functions-to-interact-with-api)
+      - [`getExchange`](#getexchange)
+      - [`getExchange`](#getexchange-1)
+      - [`getAggregates`](#getaggregates)
+  - [Data Exploration](#data-exploration)
+      - [Bitcoin Trading Volume](#bitcoin-trading-volume)
+
 # Interacting with Crypto API
 
 # Requirements
@@ -7,27 +16,37 @@
 library(tidyverse)
 library(jsonlite)
 library(knitr)
+library(lubridate)
 APIkey="r87x5acIqxjYxZWZ31xO3dxUjQGVlja6"
 ```
 
 # Functions to Interact with API
 
+\(~\)
+
 ## `getExchange`
 
-Description: Function to get Crypto Exchanges Data Input: None Output:
-Returns a table of exchange data information
+Description: Function to get Crypto Exchanges Data
+
+Input: None
+
+Output: Returns a table of exchange data information
 
 ``` r
 getExchange <- function(){
+  
+# Build the URL  
 baseURL <- "https://api.polygon.io/v1/meta/crypto-exchanges/"
 key <- paste0("?apiKey=", APIkey)
 URL <- paste0(baseURL, key)
 
+# Use the URL to retrieve data from API
 exchangeData <- fromJSON(URL)
 
 return(exchangeData)
 }
 
+# Sample Function Call
 kable(getExchange())
 ```
 
@@ -39,47 +58,130 @@ kable(getExchange())
 | 10 | crypto | HitBTC   | <https://hitbtc.com/>           | crypto | G      |
 | 23 | crypto | Kraken   | <https://www.kraken.com/en-us/> | crypto | G      |
 
+\(~\)
+
+## `getExchange`
+
+Description: Function to get the daily grouped data for the entire
+Crypto market
+
+Input: Date in “YYYY-MM-DD” format
+
+Output: Returns a table of containing crypto market information for the
+input date
+
 ``` r
-## -----------------------------------------
+getDailyMarket <- function(date=Sys.Date()){
+
+# Build the URL
+baseURL <- "https://api.polygon.io/v2/aggs/grouped/locale/global/market/crypto/"
+key <- paste0("?apiKey=", APIkey)
+day <- date
+URL <- paste0(baseURL, day, key)
+
+# Use the URL to retrieve data from API
+rawList <- fromJSON(URL)
+rawData <- rawList$results
+
+return(rawData)
+}
+
+# Sample Function Call
+kable(head(getDailyMarket("2021-09-30")))
+```
+
+| T         |           v |         vw |           o |          c |           h |          l |            t |      n |
+| :-------- | ----------: | ---------: | ----------: | ---------: | ----------: | ---------: | -----------: | -----: |
+| X:ICPUSD  |   447451.61 |    44.6208 |    44.40000 | 4.5153e+01 |    45.61900 |    43.4200 | 1.633046e+12 |  37140 |
+| X:LTCEUR  |    41156.12 |   130.2481 |   124.85000 | 1.3140e+02 |   133.41000 |   124.0400 | 1.633046e+12 |  11083 |
+| X:MANAUSD |  4765498.42 |     0.6712 |     0.64500 | 6.9100e-01 |     0.69500 |     0.6410 | 1.633046e+12 |   6432 |
+| X:IOTXUSD | 95221266.00 |     0.0625 |     0.06025 | 6.0750e-02 |     0.06529 |     0.0594 | 1.633046e+12 |  18633 |
+| X:BTCUSD  |    21714.96 | 43121.0651 | 41519.11000 | 4.3339e+04 | 43859.98503 | 41409.6700 | 1.633046e+12 | 390410 |
+| X:RLYUSD  |  3370856.00 |     0.5490 |     0.52530 | 5.4660e-01 |     0.58790 |     0.5233 | 1.633046e+12 |  10585 |
+
+``` r
+dailyMarket <- getDailyMarket("2021-09-30")
+```
+
+## `getAggregates`
+
+Description: Function to get 1-year aggregate data for a cryptocurrency
+pair ending at a given date
+
+Input: Date in “YYYY-MM-DD” format
+
+Output: Returns a table of containing crypto market information such as
+daily volume and price
+
+``` r
+# Retrieve the date 1 year prior to the input date
+date = "2021-09-29"
+dayEnd <- as.Date(date)
+dayStart <- dayEnd - 365
+
+reference <- cbind(c("BTCUSD", "ETHUSD", "ADAUSD"),
+                   c("BITCOIN", "ETHEREUM", "CARDANO")
+                  )
+
+# Build the URL
 baseURL <- "https://api.polygon.io/v2/aggs/ticker/"
 ticker <- paste0("X:", "BTCUSD", "/")
 range <- "range/1/day/"
-day1 <- "2021-01-01/"
-day2 <- "2021-09-20"
-otherSettings <- "?adjusted=true&sort=asc&limit=365"
-key <- "&apikey=r87x5acIqxjYxZWZ31xO3dxUjQGVlja6"
-URL <- paste0(baseURL, ticker, range, day1, day2, otherSettings, key)
+otherSettings <- "?adjusted=true&sort=asc&limit=366"
+key <- paste0("&apiKey=", APIkey)
+URL <- paste0(baseURL, ticker, range, dayStart, "/", dayEnd, otherSettings, key)
 
-rawData <- fromJSON(URL)
+# Use the URL to retrieve data from API
+rawList <- fromJSON(URL)
+rawData <- rawList$results
 
-dayStart <- as.Date(day1)
-dayEnd <- as.Date(day2)
-numDays <- dayEnd - dayStart + 1
+# Select Variables for the output dataset
+date_range <- as.Date(c(dayStart:dayEnd), origin = "1970-01-01")
 
+# Get the Quarter of the date
+qtr <- paste0(year(cryptoData$Date), " Q", quarter(cryptoData$Date))
 
-cryptoData <- as.data.frame(rawData["results"])
-change1Day <- (cryptoData$results.c[263] - cryptoData$results.c[262]) / cryptoData$results.c[262]
-change7Day <- (cryptoData$results.c[263] - cryptoData$results.c[256]) / cryptoData$results.c[256]
-change30Day <-(cryptoData$results.c[263] - cryptoData$results.c[233]) / cryptoData$results.c[233]
-
-kable(c(cryptoData$results.c[263], change1Day, change7Day, change30Day))
-```
-
-|             x |
-| ------------: |
-| 43012.9700000 |
-|   \-0.0897866 |
-|   \-0.0430445 |
-|   \-0.1192545 |
-
-``` r
-plot(x=dayStart:dayEnd, y=cryptoData$results.c)
-```
-
-![](../images/unnamed-chunk-2-1.png)<!-- -->
-
-``` r
-# cryptoData %>%
+cryptoData <- data.frame(qtr, date_range, rawData$v, rawData$c)
+colnames(cryptoData) <- c("Quarter", "Date", "Volume", "Closing Price")
 ```
 
 # Data Exploration
+
+``` r
+# Calculate percent change
+price <- cryptoData$`Closing Price`
+
+change1Day <- (price[366] - price[365]) / price[365]
+change7Day <- (price[366] - price[359]) / price[359]
+change30Day <-(price[366] - price[336]) / price[336]
+change365Day <- (price[366] - price[1]) / price[1]
+
+kable(cbind(price[366], change1Day, change7Day, change30Day, change365Day), nrow=1)
+```
+
+|          | change1Day |  change7Day | change30Day | change365Day |
+| -------: | ---------: | ----------: | ----------: | -----------: |
+| 41522.16 |  0.0120921 | \-0.0474281 | \-0.1164315 |      2.82968 |
+
+``` r
+plot(x=cryptoData$Date, y= cryptoData$`Closing Price`)
+```
+
+![](../images/unnamed-chunk-23-1.png)<!-- -->
+
+## Bitcoin Trading Volume
+
+We can examine the Bitcoin trading Volume by looking at the Box plot.
+
+``` r
+ggplot(cryptoData, aes(Quarter, Volume)) +
+   geom_boxplot(size=1) +
+   geom_jitter(aes(y=Volume, fill=Quarter, color=Quarter), size=2) +
+   labs(title="Boxplot for Bitcoin Trading Volume by Quarter") +
+   theme(text=element_text(size=16), 
+         panel.grid.major = element_line(size=1.5),
+         axis.ticks = element_line(size=1.4),
+         axis.ticks.length = unit(0.20, 'cm'))
+```
+
+![](../images/Boxplot-1.png)<!-- -->
