@@ -21,119 +21,171 @@ rmarkdown::render("_Rmd/Vignette.Rmd",
 
 # Requirements
 
-```{r requirements, message=FALSE, warning=FALSE}
+The following packages are required to use the API function:
+
+  + `tidyverse`: Useful data tools for transforming and visualizing data
+  + `jsonlite`: Interact and download data with API
+  + `knitr`: Display well-formatted tables
+  + `lubridate`: Useful date functions such as quarter
+
+You will also need an API key to be able to interact with the API. Please go to [polygon.io](https://polygon.io/) to register for a free API key. You will need to assign the key to the variable `APIkey`, as follows: 
+
+```{r APIkey, eval=FALSE}
+APIkey = "insert_key_here"
+```
+
+
+```{r requirements, include=FALSE}
 library(tidyverse)
 library(jsonlite)
 library(knitr)
 library(lubridate)
+
 APIkey="r87x5acIqxjYxZWZ31xO3dxUjQGVlja6"
 ```
 
 # Functions to Interact with API
 
-$~$
 
 ## `getExchange` 
 
-Description: Function to get Crypto Exchanges Data
+**Description:** Function to get Crypto Exchanges Data
 
-Input: None
+**Input:** None
 
-Output: Returns a table of exchange data information
+**Output:** Returns a table of exchange data information
 
 ```{r exchange}
 
 getExchange <- function(){
   
-# Build the URL  
-baseURL <- "https://api.polygon.io/v1/meta/crypto-exchanges/"
-key <- paste0("?apiKey=", APIkey)
-URL <- paste0(baseURL, key)
-
-# Use the URL to retrieve data from API
-exchangeData <- fromJSON(URL)
-
-return(exchangeData)
+   # Build the URL  
+   baseURL <- "https://api.polygon.io/v1/meta/crypto-exchanges/"
+   key <- paste0("?apiKey=", APIkey)
+   URL <- paste0(baseURL, key)
+   
+   # Use the URL to retrieve data from API
+   exchangeData <- fromJSON(URL)
+   
+   return(exchangeData)
 }
 
 # Sample Function Call
 kable(getExchange())
 ```
 
-$~$
 
-## `getExchange` 
 
-Description: Function to get the daily grouped data for the entire Crypto market
+## `getDailyMarket` 
 
-Input: Date in "YYYY-MM-DD" format
+**Description:** Function to get the daily grouped data for the entire Crypto market
 
-Output: Returns a table of containing crypto market information for the input date
+**Input:** Date in "YYYY-MM-DD" format
+
+**Output:** Returns a table of containing crypto market information for the input date
 
 ```{r DailyMarket}
 getDailyMarket <- function(date=Sys.Date()){
 
-# Build the URL
-baseURL <- "https://api.polygon.io/v2/aggs/grouped/locale/global/market/crypto/"
-key <- paste0("?apiKey=", APIkey)
-day <- date
-URL <- paste0(baseURL, day, key)
-
-# Use the URL to retrieve data from API
-rawList <- fromJSON(URL)
-rawData <- rawList$results
-
-return(rawData)
+   # Build the URL
+   baseURL <- "https://api.polygon.io/v2/aggs/grouped/locale/global/market/crypto/"
+   key <- paste0("?apiKey=", APIkey)
+   day <- date
+   URL <- paste0(baseURL, day, key)
+   
+   # Use the URL to retrieve data from API
+   rawList <- fromJSON(URL)
+   rawData <- rawList$results
+   
+   marketData <- rawData %>% select(ticker = T, volume = v, price = c)
+   
+   return(marketData)
 }
 
 # Sample Function Call
-kable(head(getDailyMarket("2021-09-30")))
 
 dailyMarket <- getDailyMarket("2021-09-30")
+kable(head(dailyMarket))
 ```
 
 
 ## `getAggregates` 
 
-Description: Function to get 1-year aggregate data for a cryptocurrency pair ending at a given date
+**Description:** Function to get 1-year aggregate data for a cryptocurrency pair ending at a given date
 
-Input: Date in "YYYY-MM-DD" format
+**Input:** Date in "YYYY-MM-DD" format
 
-Output: Returns a table of containing crypto market information such as daily volume and price
+**Output:** Returns a table of containing crypto market information such as daily volume and price
 
-```{r}
-# Retrieve the date 1 year prior to the input date
-date = "2021-09-29"
-dayEnd <- as.Date(date)
-dayStart <- dayEnd - 365
+```{r Aggregates}
+getAggregates <- function(date=Sys.Date(), name="", abbr){
 
-reference <- cbind(c("BTCUSD", "ETHUSD", "ADAUSD"),
-                   c("BITCOIN", "ETHEREUM", "CARDANO")
-                  )
+   # Retrieve the date 1 year prior to the input date
+   dayEnd <- as.Date(date)
+   dayStart <- dayEnd - 364
+   
+   reference <- cbind(c("BTCUSD", "ETHUSD", "ADAUSD", "XRPUSD"),
+                      c("BITCOIN", "ETHEREUM", "CARDANO", "XRP")
+                     )
+   
+   # Allow user to specify either the crypto currency name or the ticker name
+   if (name != ""){
+   symbol <- switch(toupper(name),
+                    BITCOIN = "BTCUSD",
+                    ETHEREUM = "ETHUSD",
+                    CARDANO = "ADAUSD",
+                    XRP = "XRPUSD",
+                    SOLANA = "SOLUSD",
+                    POLKADOT = "DOTUSD",
+                    DOGECOIN = "DOGEUSD",
+                    UNISWAP = "UNIUSD",
+                    CHAINLINK = "LINKUSD",
+                    LITECOIN = "LTCUSD",
+                    )
+   } else if (abbr != ""){
+     symbol <- toupper(abbr)
+   } 
+   
+   if (symbol == ""){
+      message <- paste("ERROR: Only the top 10 cryptocurrencies by market cap are supported,", 
+                       "please input another name, or use the `abbr` parameter to input the symbol")
+      stop(message)
+      
+   }else if (!(paste0("X:", symbol) %in% dailyMarket$ticker)){
+      message <- "ERROR: Symbol not supported. Please input a valid symbol"
+      
+      stop(message)
+   }
+   
+   
+   # Build the URL
+   baseURL <- "https://api.polygon.io/v2/aggs/ticker/"
+   ticker <- paste0("X:", symbol, "/")
+   range <- "range/1/day/"
+   otherSettings <- "?adjusted=true&sort=asc&limit=365"
+   key <- paste0("&apiKey=", APIkey)
+   URL <- paste0(baseURL, ticker, range, dayStart, "/", dayEnd, otherSettings, key)
+   
 
-# Build the URL
-baseURL <- "https://api.polygon.io/v2/aggs/ticker/"
-ticker <- paste0("X:", "BTCUSD", "/")
-range <- "range/1/day/"
-otherSettings <- "?adjusted=true&sort=asc&limit=366"
-key <- paste0("&apiKey=", APIkey)
-URL <- paste0(baseURL, ticker, range, dayStart, "/", dayEnd, otherSettings, key)
+   # Use the URL to retrieve data from API
+   rawList <- fromJSON(URL)
+   rawData <- rawList$results
+   
+   # Select Variables for the output dataset
+   date_range <- as.Date(c(dayStart:dayEnd), origin = "1970-01-01")
+   
+   # Get the Quarter of the date
+   qtr <- paste0(year(date_range), " Q", quarter(date_range))
+   
+   cryptoData <- data.frame(qtr, date_range, rawData$v, rawData$o, rawData$c)
+   colnames(cryptoData) <- c("quarter", "date", "volume", "priceOpen", "priceClose")
+   
+   return(cryptoData)
+}
 
-# Use the URL to retrieve data from API
-rawList <- fromJSON(URL)
-rawData <- rawList$results
+bitcoinData <- getAggregates("2021-09-30", name="bitcoin")
 
-# Select Variables for the output dataset
-date_range <- as.Date(c(dayStart:dayEnd), origin = "1970-01-01")
-
-# Get the Quarter of the date
-qtr <- paste0(year(cryptoData$Date), " Q", quarter(cryptoData$Date))
-
-cryptoData <- data.frame(qtr, date_range, rawData$v, rawData$c)
-colnames(cryptoData) <- c("Quarter", "Date", "Volume", "Closing Price")
-
-
-
+kable(head(bitcoinData))
 ```
 
 
@@ -141,10 +193,9 @@ colnames(cryptoData) <- c("Quarter", "Date", "Volume", "Closing Price")
 
 
 
-```{r}
-
+```{r pctchg}
 # Calculate percent change
-price <- cryptoData$`Closing Price`
+price <- bitcoinData$`Closing Price`
 
 change1Day <- (price[366] - price[365]) / price[365]
 change7Day <- (price[366] - price[359]) / price[359]
@@ -153,7 +204,7 @@ change365Day <- (price[366] - price[1]) / price[1]
 
 kable(cbind(price[366], change1Day, change7Day, change30Day, change365Day), nrow=1)
   
-plot(x=cryptoData$Date, y= cryptoData$`Closing Price`)
+plot(x=bitcoinData$date, y= bitcoinData$priceClose)
 
 ```
 
@@ -162,9 +213,9 @@ plot(x=cryptoData$Date, y= cryptoData$`Closing Price`)
 We can examine the Bitcoin trading Volume by looking at the Box plot. 
 
 ```{r Boxplot}
-ggplot(cryptoData, aes(Quarter, Volume)) +
+ggplot(bitcoinData, aes(quarter, volume)) +
    geom_boxplot(size=1) +
-   geom_jitter(aes(y=Volume, fill=Quarter, color=Quarter), size=2) +
+   geom_jitter(aes(y=volume, fill=quarter, color=quarter), size=2) +
    labs(title="Boxplot for Bitcoin Trading Volume by Quarter") +
    theme(text=element_text(size=16), 
          panel.grid.major = element_line(size=1.5),
@@ -172,7 +223,10 @@ ggplot(cryptoData, aes(Quarter, Volume)) +
          axis.ticks.length = unit(0.20, 'cm'))
 ```
 
+```{r BTC_ETH}
 
+
+```
 
 
 

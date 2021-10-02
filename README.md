@@ -3,7 +3,7 @@
   - [Requirements](#requirements)
   - [Functions to Interact with API](#functions-to-interact-with-api)
       - [`getExchange`](#getexchange)
-      - [`getExchange`](#getexchange-1)
+      - [`getDailyMarket`](#getdailymarket)
       - [`getAggregates`](#getaggregates)
   - [Data Exploration](#data-exploration)
       - [Bitcoin Trading Volume](#bitcoin-trading-volume)
@@ -21,8 +21,6 @@ APIkey="r87x5acIqxjYxZWZ31xO3dxUjQGVlja6"
 ```
 
 # Functions to Interact with API
-
-\(~\)
 
 ## `getExchange`
 
@@ -58,9 +56,7 @@ kable(getExchange())
 | 10 | crypto | HitBTC   | <https://hitbtc.com/>           | crypto | G      |
 | 23 | crypto | Kraken   | <https://www.kraken.com/en-us/> | crypto | G      |
 
-\(~\)
-
-## `getExchange`
+## `getDailyMarket`
 
 Description: Function to get the daily grouped data for the entire
 Crypto market
@@ -90,14 +86,14 @@ return(rawData)
 kable(head(getDailyMarket("2021-09-30")))
 ```
 
-| T         |           v |         vw |           o |          c |           h |          l |            t |      n |
-| :-------- | ----------: | ---------: | ----------: | ---------: | ----------: | ---------: | -----------: | -----: |
-| X:ICPUSD  |   447451.61 |    44.6208 |    44.40000 | 4.5153e+01 |    45.61900 |    43.4200 | 1.633046e+12 |  37140 |
-| X:LTCEUR  |    41156.12 |   130.2481 |   124.85000 | 1.3140e+02 |   133.41000 |   124.0400 | 1.633046e+12 |  11083 |
-| X:MANAUSD |  4765498.42 |     0.6712 |     0.64500 | 6.9100e-01 |     0.69500 |     0.6410 | 1.633046e+12 |   6432 |
-| X:IOTXUSD | 95221266.00 |     0.0625 |     0.06025 | 6.0750e-02 |     0.06529 |     0.0594 | 1.633046e+12 |  18633 |
-| X:BTCUSD  |    21714.96 | 43121.0651 | 41519.11000 | 4.3339e+04 | 43859.98503 | 41409.6700 | 1.633046e+12 | 390410 |
-| X:RLYUSD  |  3370856.00 |     0.5490 |     0.52530 | 5.4660e-01 |     0.58790 |     0.5233 | 1.633046e+12 |  10585 |
+| T         |           v |         vw |           o |           c |           h |          l |            t |      n |
+| :-------- | ----------: | ---------: | ----------: | ----------: | ----------: | ---------: | -----------: | -----: |
+| X:ICPUSD  |   450593.05 |    44.6230 |    44.40000 |    44.86300 |    45.61900 |    43.4200 | 1.633046e+12 |  37416 |
+| X:LTCEUR  |    41612.44 |   130.2602 |   124.85000 |   131.28000 |   133.41000 |   124.0400 | 1.633046e+12 |  11202 |
+| X:MANAUSD |  4859310.43 |     0.6716 |     0.64500 |     0.69700 |     0.69800 |     0.6410 | 1.633046e+12 |   6598 |
+| X:IOTXUSD | 95415671.00 |     0.0625 |     0.06025 |     0.06088 |     0.06529 |     0.0594 | 1.633046e+12 |  18722 |
+| X:BTCUSD  |    21919.73 | 43123.0966 | 41519.11000 | 43383.40000 | 43859.98503 | 41409.6700 | 1.633046e+12 | 395656 |
+| X:RLYUSD  |  3385452.00 |     0.5490 |     0.52530 |     0.54480 |     0.58790 |     0.5233 | 1.633046e+12 |  10669 |
 
 ``` r
 dailyMarket <- getDailyMarket("2021-09-30")
@@ -167,7 +163,7 @@ kable(cbind(price[366], change1Day, change7Day, change30Day, change365Day), nrow
 plot(x=cryptoData$Date, y= cryptoData$`Closing Price`)
 ```
 
-![](../images/unnamed-chunk-23-1.png)<!-- -->
+![](../images/unnamed-chunk-3-1.png)<!-- -->
 
 ## Bitcoin Trading Volume
 
