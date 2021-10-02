@@ -98,14 +98,14 @@ dailyMarket <- getDailyMarket("2021-09-30")
 kable(head(dailyMarket))
 ```
 
-| ticker    |       volume |       price |
-| :-------- | -----------: | ----------: |
-| X:ICPUSD  |    539819.67 |    45.08400 |
-| X:LTCEUR  |     54319.85 |   132.23000 |
-| X:MANAUSD |   6227804.05 |     0.68900 |
-| X:IOTXUSD | 109464846.00 |     0.06036 |
-| X:BTCUSD  |     28947.92 | 43770.97000 |
-| X:RLYUSD  |   4297315.00 |     0.54050 |
+| ticker    |      volume |      price |
+| :-------- | ----------: | ---------: |
+| X:ICPUSD  |    539819.7 |  45.084000 |
+| X:XLMUSD  | 127436391.1 |   0.278615 |
+| X:COMPUSD |    120354.6 | 318.200000 |
+| X:MANAUSD |   6227804.0 |   0.689000 |
+| X:IOTXUSD | 109464846.0 |   0.060360 |
+| X:USDTUSD | 121987151.1 |   1.000100 |
 
 ## `getAggregates`
 
@@ -218,7 +218,7 @@ kable(cbind(price[366], change1Day, change7Day, change30Day, change365Day), nrow
 plot(x=bitcoinData$date, y= bitcoinData$priceClose)
 ```
 
-![](C:\\Users\\joeyc\\Desktop\\MR%20Statistics\\ST%20558\\repos\\Vignette\\README_files/figure-gfm/pctchg-1.png)<!-- -->
+![](README_files/figure-gfm/pctchg-1.png)<!-- -->
 
 ## Bitcoin Trading Volume
 
@@ -235,4 +235,4 @@ ggplot(bitcoinData, aes(quarter, volume)) +
          axis.ticks.length = unit(0.20, 'cm'))
 ```
 
-![](C:\\Users\\joeyc\\Desktop\\MR%20Statistics\\ST%20558\\repos\\Vignette\\README_files/figure-gfm/Boxplot-1.png)<!-- -->
+![](README_files/figure-gfm/Boxplot-1.png)<!-- -->
