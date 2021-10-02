@@ -11,3 +11,4 @@ rmarkdown::render("Crypto-Vignette.Rmd",
                     toc_depth = 2
                   )
 )
+

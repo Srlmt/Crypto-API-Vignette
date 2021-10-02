@@ -1,5 +1,8 @@
+Interacting with Cryptocurrency API
+================
+Joey Chen
+10/5/2021
 
-  - [Interacting with Crypto API](#interacting-with-crypto-api)
   - [Requirements](#requirements)
   - [Functions to Interact with API](#functions-to-interact-with-api)
       - [`getExchange`](#getexchange)
@@ -8,9 +11,13 @@
   - [Data Exploration](#data-exploration)
       - [Bitcoin Trading Volume](#bitcoin-trading-volume)
 
-# Interacting with Crypto API
+![](%22images/crypto.jpg%22)<!-- -->
+
+Brief Intro Here…
 
 # Requirements
+
+![](%22images/packages.png%22)<!-- -->
 
 The following packages are required to use the API function:
 

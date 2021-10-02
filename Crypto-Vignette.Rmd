@@ -1,25 +1,21 @@
+---
+title: "Interacting with Cryptocurrency API"
+author: "Joey Chen"
+date: "10/5/2021"
+---
+
 
 ```{r setup, include=FALSE}
 #knitr::opts_chunk$set(echo = TRUE, fig.path = "../images/")
 ```
 
+![]("images/crypto.jpg")<!-- -->
 
-```{r, include = FALSE, eval=FALSE}
-rmarkdown::render("_Rmd/Vignette.Rmd", 
-          output_format = "github_document", 
-          output_dir = getwd(),
-          output_file = "README.md",
-          output_options = list(
-            html_preview = FALSE,
-            toc = TRUE,
-            toc_depth = 2
-            )
-          )
-```
-
-# Interacting with Crypto API
+Brief Intro Here...
 
 # Requirements
+
+![]("images/packages.png")<!-- -->
 
 The following packages are required to use the API function:
 
