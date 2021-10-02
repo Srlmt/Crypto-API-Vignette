@@ -3,36 +3,40 @@ Interacting with Cryptocurrency API
 Joey Chen
 10/5/2021
 
+  - [Introduction](#introduction)
   - [Requirements](#requirements)
+      - [R Packages](#r-packages)
+      - [API Key](#api-key)
   - [Functions to Interact with API](#functions-to-interact-with-api)
       - [`getExchange`](#getexchange)
+      - [`getNews`](#getnews)
       - [`getDailyMarket`](#getdailymarket)
+      - [`getPreviousClose`](#getpreviousclose)
       - [`getAggregates`](#getaggregates)
   - [Data Exploration](#data-exploration)
       - [Bitcoin Trading Volume](#bitcoin-trading-volume)
-
-``` r
-include_graphics(path="images/crypto.jpg")
-```
+  - [Conclusion](#conclusion)
 
 <img src="images/crypto.jpg" width="527" />
+
+# Introduction
 
 Brief Intro Here…
 
 # Requirements
 
-``` r
-include_graphics(path="images/packages.png")
-```
-
 <img src="images/packages.png" width="1031" />
+
+### R Packages
 
 The following packages are required to use the API function:
 
   - `tidyverse`: Useful data tools for transforming and visualizing data
   - `jsonlite`: Interact and download data with API
   - `knitr`: Display well-formatted tables
-  - `lubridate`: Useful date functions such as quarter
+  - `lubridate`: Useful date functions
+
+### API Key
 
 You will also need an API key to be able to interact with the API.
 Please go to [polygon.io](https://polygon.io/) to register for a free
@@ -44,6 +48,8 @@ APIkey = "insert_key_here"
 ```
 
 # Functions to Interact with API
+
+…
 
 ## `getExchange`
 
@@ -79,6 +85,43 @@ kable(getExchange())
 | 10 | crypto | HitBTC   | <https://hitbtc.com/>           | crypto | G      |
 | 23 | crypto | Kraken   | <https://www.kraken.com/en-us/> | crypto | G      |
 
+## `getNews`
+
+**Description:** Function to get Bitcoin news. It currently does not
+work for any other cryptocurrencies.
+
+**Input:** None
+
+**Output:** Returns a table of Bitcoin news such as title, author, and
+link.
+
+``` r
+getNews <- function(){
+  
+   # Build the URL  
+   baseURL <- "https://api.polygon.io/v2/reference/news?limit=20&order=descending&sort=published_utc&ticker=BTC"
+   key <- paste0("&apiKey=", APIkey)
+   URL <- paste0(baseURL, key)
+   
+   # Use the URL to retrieve data from API
+   newsList <- fromJSON(URL)
+   newsData <- newsList$results %>% select(publisher, title, author, published_utc, article_url)
+   
+   return(newsData)
+}
+
+# Sample Function Call
+kable(head(getNews(), n=3))
+```
+
+    ## Warning in `[<-.data.frame`(`*tmp*`, , j, value = structure(list(name = structure(c("Benzinga", : provided 4 variables to replace 1 variables
+
+| publisher | title                                                                                   | author            | published\_utc       | article\_url                                                                                                                                            |
+| :-------- | :-------------------------------------------------------------------------------------- | :---------------- | :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Benzinga  | Why You Shouldn’t Invest In Cryptocurrency, According To This Analyst                   | Adrian Zmudzinski | 2021-06-15T22:10:55Z | <https://www.benzinga.com/markets/cryptocurrency/21/06/21562733/why-you-shouldnt-invest-in-cryptocurrency-according-to-this-analyst>                    |
+| Benzinga  | Billionaire Investor Tim Draper Still Believes Bitcoin Will Hit $250,000 By End Of 2022 | Adrian Zmudzinski | 2021-06-15T19:56:59Z | <https://www.benzinga.com/markets/cryptocurrency/21/06/21563347/billionaire-investor-tim-draper-still-believes-bitcoin-will-hit-250-000-by-end-of-2022> |
+| Benzinga  | Two Former PayPal Execs Launch Crypto Payments Platform To Fight SWIFT Banking System   | Adrian Zmudzinski | 2021-06-15T16:56:30Z | <https://www.benzinga.com/markets/cryptocurrency/21/06/21570582/two-former-paypal-execs-launch-crypto-payments-platform-to-fight-swift-banking-system>  |
+
 ## `getDailyMarket`
 
 **Description:** Function to get the daily grouped data for the entire
@@ -108,19 +151,51 @@ getDailyMarket <- function(date=Sys.Date()){
 }
 
 # Sample Function Call
-
 dailyMarket <- getDailyMarket("2021-09-30")
-kable(head(dailyMarket))
+kable(head(dailyMarket, n=5))
 ```
 
-| ticker    |       volume |       price |
-| :-------- | -----------: | ----------: |
-| X:ICPUSD  |    539819.67 |    45.08400 |
-| X:LTCEUR  |     54319.85 |   132.23000 |
-| X:MANAUSD |   6227804.05 |     0.68900 |
-| X:IOTXUSD | 109464846.00 |     0.06036 |
-| X:BTCUSD  |     28947.92 | 43770.97000 |
-| X:RLYUSD  |   4297315.00 |     0.54050 |
+| ticker    |      volume |      price |
+| :-------- | ----------: | ---------: |
+| X:ICPUSD  |    539819.7 |  45.084000 |
+| X:XLMUSD  | 127436391.1 |   0.278615 |
+| X:COMPUSD |    120354.6 | 318.200000 |
+| X:MANAUSD |   6227804.0 |   0.689000 |
+| X:IOTXUSD | 109464846.0 |   0.060360 |
+
+## `getPreviousClose`
+
+**Description:** Function to get the previous day’s open, high, low, and
+close for the input cryptocurrency
+
+**Input:** Cryptocurrency pair ticker. Example: “BTCUSD” or “ETHUSD”
+
+**Output:** Returns a table of containing previous day’s data
+
+``` r
+getPreviousClose <- function(ticker){
+      
+   baseURL <- "https://api.polygon.io/v2/aggs/ticker/"
+   ticker <- paste0("X:", symbol, "/")
+   otherSettings <- "prev?adjusted=true"
+   key <- paste0("&apiKey=", APIkey)
+   URL <- paste0(baseURL, ticker, otherSettings, key)
+   
+
+   # Use the URL to retrieve data from API
+   rawList <- fromJSON(URL)
+   rawData <- rawList$results %>% select(ticker = T, volume = v, priceOpen = o, priceClose = c, priceLowest = l, priceHighest = h)
+
+   return(rawData)   
+}
+
+#Sample Function Call
+kable(getPreviousClose("BTCUSD"))
+```
+
+| ticker   |  volume | priceOpen | priceClose | priceLowest | priceHighest |
+| :------- | ------: | --------: | ---------: | ----------: | -----------: |
+| X:BTCUSD | 38375.5 |  43828.89 |   48165.76 |    43287.44 |        48500 |
 
 ## `getAggregates`
 
@@ -133,7 +208,7 @@ cryptocurrency pair ending at a given date
 as daily volume and price
 
 ``` r
-getAggregates <- function(date=Sys.Date(), name="", abbr){
+getAggregates <- function(date=Sys.Date(), name="", ticker){
 
    # Retrieve the date 1 year prior to the input date
    dayEnd <- as.Date(date)
@@ -157,13 +232,13 @@ getAggregates <- function(date=Sys.Date(), name="", abbr){
                     CHAINLINK = "LINKUSD",
                     LITECOIN = "LTCUSD",
                     )
-   } else if (abbr != ""){
-     symbol <- toupper(abbr)
+   } else if (ticker != ""){
+     symbol <- toupper(ticker)
    } 
    
    if (symbol == ""){
       message <- paste("ERROR: Only the top 10 cryptocurrencies by market cap are supported,", 
-                       "please input another name, or use the `abbr` parameter to input the symbol")
+                       "please input another name, or use the `ticker` and input a valid Crypto ticker")
       stop(message)
       
    }else if (!(paste0("X:", symbol) %in% dailyMarket$ticker)){
@@ -200,7 +275,7 @@ getAggregates <- function(date=Sys.Date(), name="", abbr){
 
 bitcoinData <- getAggregates("2021-09-30", name="bitcoin")
 
-kable(head(bitcoinData))
+kable(head(bitcoinData, n=5))
 ```
 
 | quarter | date       |   volume | priceOpen | priceClose |
@@ -210,7 +285,6 @@ kable(head(bitcoinData))
 | 2020 Q4 | 2020-10-03 | 27705.14 |  10586.00 |   10551.65 |
 | 2020 Q4 | 2020-10-04 | 23021.75 |  10550.32 |   10671.11 |
 | 2020 Q4 | 2020-10-05 | 37483.09 |  10669.00 |   10799.00 |
-| 2020 Q4 | 2020-10-06 | 41179.06 |  10796.97 |   10601.49 |
 
 # Data Exploration
 
@@ -251,3 +325,5 @@ ggplot(bitcoinData, aes(quarter, volume)) +
 ```
 
 ![](README_files/figure-gfm/Boxplot-1.png)<!-- -->
+
+# Conclusion

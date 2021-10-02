@@ -4,11 +4,6 @@ author: "Joey Chen"
 date: "10/5/2021"
 ---
 
-
-```{r setup, include=FALSE}
-#knitr::opts_chunk$set(echo = TRUE, fig.path = "../images/")
-```
-
 ```{r packages and API, include=FALSE}
 library(tidyverse)
 library(jsonlite)
@@ -18,25 +13,30 @@ library(lubridate)
 APIkey="r87x5acIqxjYxZWZ31xO3dxUjQGVlja6"
 ```
 
-```{r graphics_crypto}
+```{r graphics_crypto, echo=FALSE}
 include_graphics(path="images/crypto.jpg")
 ```
+
+# Introduction
 
 Brief Intro Here...
 
 # Requirements
 
-```{r graphics_packages}
+```{r graphics_packages, echo=FALSE}
 include_graphics(path="images/packages.png")
 ```
 
+### R Packages
 
 The following packages are required to use the API function:
 
   + `tidyverse`: Useful data tools for transforming and visualizing data
   + `jsonlite`: Interact and download data with API
   + `knitr`: Display well-formatted tables
-  + `lubridate`: Useful date functions such as quarter
+  + `lubridate`: Useful date functions 
+
+### API Key
 
 You will also need an API key to be able to interact with the API. Please go to [polygon.io](https://polygon.io/) to register for a free API key. You will need to assign the key to the variable `APIkey`, as follows: 
 
@@ -46,6 +46,7 @@ APIkey = "insert_key_here"
 
 # Functions to Interact with API
 
+...
 
 ## `getExchange` 
 
@@ -75,6 +76,34 @@ kable(getExchange())
 ```
 
 
+## `getNews` 
+
+**Description:** Function to get Bitcoin news. It currently does not work for any other cryptocurrencies.
+
+**Input:** None
+
+**Output:** Returns a table of Bitcoin news such as title, author, and link. 
+
+```{r news, message=FALSE}
+
+getNews <- function(){
+  
+   # Build the URL  
+   baseURL <- "https://api.polygon.io/v2/reference/news?limit=20&order=descending&sort=published_utc&ticker=BTC"
+   key <- paste0("&apiKey=", APIkey)
+   URL <- paste0(baseURL, key)
+   
+   # Use the URL to retrieve data from API
+   newsList <- fromJSON(URL)
+   newsData <- newsList$results %>% select(publisher, title, author, published_utc, article_url)
+   
+   return(newsData)
+}
+
+# Sample Function Call
+kable(head(getNews(), n=3))
+```
+
 
 ## `getDailyMarket` 
 
@@ -103,9 +132,38 @@ getDailyMarket <- function(date=Sys.Date()){
 }
 
 # Sample Function Call
-
 dailyMarket <- getDailyMarket("2021-09-30")
-kable(head(dailyMarket))
+kable(head(dailyMarket, n=5))
+```
+
+
+## `getPreviousClose` 
+
+**Description:** Function to get the previous day's open, high, low, and close for the input cryptocurrency
+
+**Input:** Cryptocurrency pair ticker. Example: "BTCUSD" or "ETHUSD"
+
+**Output:** Returns a table of containing previous day's data
+
+```{r PreviousClose}
+getPreviousClose <- function(ticker){
+      
+   baseURL <- "https://api.polygon.io/v2/aggs/ticker/"
+   ticker <- paste0("X:", symbol, "/")
+   otherSettings <- "prev?adjusted=true"
+   key <- paste0("&apiKey=", APIkey)
+   URL <- paste0(baseURL, ticker, otherSettings, key)
+   
+
+   # Use the URL to retrieve data from API
+   rawList <- fromJSON(URL)
+   rawData <- rawList$results %>% select(ticker = T, volume = v, priceOpen = o, priceClose = c, priceLowest = l, priceHighest = h)
+
+   return(rawData)   
+}
+
+#Sample Function Call
+kable(getPreviousClose("BTCUSD"))
 ```
 
 
@@ -118,7 +176,7 @@ kable(head(dailyMarket))
 **Output:** Returns a table of containing crypto market information such as daily volume and price
 
 ```{r Aggregates}
-getAggregates <- function(date=Sys.Date(), name="", abbr){
+getAggregates <- function(date=Sys.Date(), name="", ticker){
 
    # Retrieve the date 1 year prior to the input date
    dayEnd <- as.Date(date)
@@ -142,13 +200,13 @@ getAggregates <- function(date=Sys.Date(), name="", abbr){
                     CHAINLINK = "LINKUSD",
                     LITECOIN = "LTCUSD",
                     )
-   } else if (abbr != ""){
-     symbol <- toupper(abbr)
+   } else if (ticker != ""){
+     symbol <- toupper(ticker)
    } 
    
    if (symbol == ""){
       message <- paste("ERROR: Only the top 10 cryptocurrencies by market cap are supported,", 
-                       "please input another name, or use the `abbr` parameter to input the symbol")
+                       "please input another name, or use the `ticker` and input a valid Crypto ticker")
       stop(message)
       
    }else if (!(paste0("X:", symbol) %in% dailyMarket$ticker)){
@@ -185,13 +243,11 @@ getAggregates <- function(date=Sys.Date(), name="", abbr){
 
 bitcoinData <- getAggregates("2021-09-30", name="bitcoin")
 
-kable(head(bitcoinData))
+kable(head(bitcoinData, n=5))
 ```
 
 
 # Data Exploration
-
-
 
 ```{r pctchg}
 # Calculate percent change
@@ -207,6 +263,7 @@ kable(cbind(price[366], change1Day, change7Day, change30Day, change365Day), nrow
 plot(x=bitcoinData$date, y= bitcoinData$priceClose)
 
 ```
+
 
 ## Bitcoin Trading Volume
 
@@ -227,6 +284,9 @@ ggplot(bitcoinData, aes(quarter, volume)) +
 
 
 ```
+
+
+# Conclusion
 
 
 
