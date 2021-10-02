@@ -18,13 +18,18 @@ library(lubridate)
 APIkey="r87x5acIqxjYxZWZ31xO3dxUjQGVlja6"
 ```
 
+```{r graphics_crypto}
 include_graphics(path="images/crypto.jpg")
+```
 
 Brief Intro Here...
 
 # Requirements
 
+```{r graphics_packages}
 include_graphics(path="images/packages.png")
+```
+
 
 The following packages are required to use the API function:
 
