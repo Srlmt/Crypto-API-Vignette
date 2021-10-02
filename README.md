@@ -11,13 +11,13 @@ Joey Chen
   - [Data Exploration](#data-exploration)
       - [Bitcoin Trading Volume](#bitcoin-trading-volume)
 
-![](%22images/crypto.jpg%22)<!-- -->
+include\_graphics(path=“images/crypto.jpg”)
 
 Brief Intro Here…
 
 # Requirements
 
-![](%22images/packages.png%22)<!-- -->
+include\_graphics(path=“images/packages.png”)
 
 The following packages are required to use the API function:
 

@@ -9,13 +9,22 @@ date: "10/5/2021"
 #knitr::opts_chunk$set(echo = TRUE, fig.path = "../images/")
 ```
 
-![]("images/crypto.jpg")<!-- -->
+```{r packages and API, include=FALSE}
+library(tidyverse)
+library(jsonlite)
+library(knitr)
+library(lubridate)
+
+APIkey="r87x5acIqxjYxZWZ31xO3dxUjQGVlja6"
+```
+
+include_graphics(path="images/crypto.jpg")
 
 Brief Intro Here...
 
 # Requirements
 
-![]("images/packages.png")<!-- -->
+include_graphics(path="images/packages.png")
 
 The following packages are required to use the API function:
 
@@ -28,16 +37,6 @@ You will also need an API key to be able to interact with the API. Please go to 
 
 ```{r APIkey, eval=FALSE}
 APIkey = "insert_key_here"
-```
-
-
-```{r requirements, include=FALSE}
-library(tidyverse)
-library(jsonlite)
-library(knitr)
-library(lubridate)
-
-APIkey="r87x5acIqxjYxZWZ31xO3dxUjQGVlja6"
 ```
 
 # Functions to Interact with API
