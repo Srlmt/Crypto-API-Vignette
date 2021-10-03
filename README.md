@@ -8,11 +8,13 @@ Joey Chen
       - [R Packages](#r-packages)
       - [API Key](#api-key)
   - [Functions to Interact with API](#functions-to-interact-with-api)
-      - [`getExchange`](#getexchange)
-      - [`getNews`](#getnews)
-      - [`getDailyMarket`](#getdailymarket)
-      - [`getPreviousClose`](#getpreviousclose)
-      - [`getAggregates`](#getaggregates)
+      - [(1) `getExchange`](#getexchange)
+      - [(2) `getNews`](#getnews)
+      - [(3) `getDailyMarket`](#getdailymarket)
+      - [(4) `getTickerDetails`](#gettickerdetails)
+      - [(5) `getPreviousClose`](#getpreviousclose)
+      - [(6) `getAggregates`](#getaggregates)
+      - [(7)\[Wrapper\] `cryptoAPI`](#wrapper-cryptoapi)
   - [Data Exploration](#data-exploration)
       - [Bitcoin Trading Volume](#bitcoin-trading-volume)
   - [Conclusion](#conclusion)
@@ -49,9 +51,9 @@ APIkey = "insert_key_here"
 
 # Functions to Interact with API
 
-…
+5 API Calls / Minute
 
-## `getExchange`
+## (1) `getExchange`
 
 **Description:** Function to get Crypto Exchanges Data
 
@@ -85,7 +87,7 @@ kable(getExchange())
 | 10 | crypto | HitBTC   | <https://hitbtc.com/>           | crypto | G      |
 | 23 | crypto | Kraken   | <https://www.kraken.com/en-us/> | crypto | G      |
 
-## `getNews`
+## (2) `getNews`
 
 **Description:** Function to get Bitcoin news. It currently does not
 work for any other cryptocurrencies.
@@ -114,15 +116,13 @@ getNews <- function(){
 kable(head(getNews(), n=3))
 ```
 
-    ## Warning in `[<-.data.frame`(`*tmp*`, , j, value = structure(list(name = structure(c("Benzinga", : provided 4 variables to replace 1 variables
-
 | publisher | title                                                                                   | author            | published\_utc       | article\_url                                                                                                                                            |
 | :-------- | :-------------------------------------------------------------------------------------- | :---------------- | :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Benzinga  | Why You Shouldn’t Invest In Cryptocurrency, According To This Analyst                   | Adrian Zmudzinski | 2021-06-15T22:10:55Z | <https://www.benzinga.com/markets/cryptocurrency/21/06/21562733/why-you-shouldnt-invest-in-cryptocurrency-according-to-this-analyst>                    |
 | Benzinga  | Billionaire Investor Tim Draper Still Believes Bitcoin Will Hit $250,000 By End Of 2022 | Adrian Zmudzinski | 2021-06-15T19:56:59Z | <https://www.benzinga.com/markets/cryptocurrency/21/06/21563347/billionaire-investor-tim-draper-still-believes-bitcoin-will-hit-250-000-by-end-of-2022> |
 | Benzinga  | Two Former PayPal Execs Launch Crypto Payments Platform To Fight SWIFT Banking System   | Adrian Zmudzinski | 2021-06-15T16:56:30Z | <https://www.benzinga.com/markets/cryptocurrency/21/06/21570582/two-former-paypal-execs-launch-crypto-payments-platform-to-fight-swift-banking-system>  |
 
-## `getDailyMarket`
+## (3) `getDailyMarket`
 
 **Description:** Function to get the daily grouped data for the entire
 Crypto market
@@ -145,7 +145,7 @@ getDailyMarket <- function(date=Sys.Date()){
    rawList <- fromJSON(URL)
    rawData <- rawList$results
    
-   marketData <- rawData %>% select(ticker = T, volume = v, price = c)
+   marketData <- rawData %>% select(ticker = T, volume = v, priceOpen = o, priceClose = c)
    
    return(marketData)
 }
@@ -155,15 +155,48 @@ dailyMarket <- getDailyMarket("2021-09-30")
 kable(head(dailyMarket, n=5))
 ```
 
-| ticker    |      volume |      price |
-| :-------- | ----------: | ---------: |
-| X:ICPUSD  |    539819.7 |  45.084000 |
-| X:XLMUSD  | 127436391.1 |   0.278615 |
-| X:COMPUSD |    120354.6 | 318.200000 |
-| X:MANAUSD |   6227804.0 |   0.689000 |
-| X:IOTXUSD | 109464846.0 |   0.060360 |
+| ticker    |       volume |   priceOpen |  priceClose |
+| :-------- | -----------: | ----------: | ----------: |
+| X:ICPUSD  |    539819.67 |    44.40000 |    45.08400 |
+| X:LTCEUR  |     54319.85 |   124.85000 |   132.23000 |
+| X:MANAUSD |   6227804.05 |     0.64500 |     0.68900 |
+| X:IOTXUSD | 109464846.00 |     0.06025 |     0.06036 |
+| X:BTCUSD  |     28947.92 | 41519.11000 | 43770.97000 |
 
-## `getPreviousClose`
+## (4) `getTickerDetails`
+
+**Description:** Function to get more information about the input ticker
+
+**Input:** Ticker name. Examples: “BTCUSD” or “ETHUSD”
+
+**Output:** Returns a table of ticker information such as currency
+symbol and name
+
+``` r
+getTickerDetails <- function(ticker){
+
+   # Build the URL  
+   baseURL <- "https://api.polygon.io/vX/reference/tickers/"
+   symbol <- paste0("X:", ticker)
+   key <- paste0("?apiKey=", APIkey)
+   URL <- paste0(baseURL, symbol, key)
+   
+   # Use the URL to retrieve data from API
+   tickerList <- fromJSON(URL)
+   tickerData <- as.data.frame(tickerList$results) %>% select(ticker, name, market, locale, currency_name, base_currency_symbol, base_currency_name)
+   
+   return(tickerData)
+}
+
+# Sample Function Call
+kable(getTickerDetails("ETHUSD"))
+```
+
+| ticker   | name                            | market | locale | currency\_name       | base\_currency\_symbol | base\_currency\_name |
+| :------- | :------------------------------ | :----- | :----- | :------------------- | :--------------------- | :------------------- |
+| X:ETHUSD | Ethereum - United States Dollar | crypto | global | United States Dollar | ETH                    | Ethereum             |
+
+## (5) `getPreviousClose`
 
 **Description:** Function to get the previous day’s open, high, low, and
 close for the input cryptocurrency
@@ -176,28 +209,27 @@ close for the input cryptocurrency
 getPreviousClose <- function(ticker){
       
    baseURL <- "https://api.polygon.io/v2/aggs/ticker/"
-   ticker <- paste0("X:", symbol, "/")
+   symbol <- paste0("X:", ticker, "/")
    otherSettings <- "prev?adjusted=true"
    key <- paste0("&apiKey=", APIkey)
-   URL <- paste0(baseURL, ticker, otherSettings, key)
+   URL <- paste0(baseURL, symbol, otherSettings, key)
    
-
    # Use the URL to retrieve data from API
-   rawList <- fromJSON(URL)
-   rawData <- rawList$results %>% select(ticker = T, volume = v, priceOpen = o, priceClose = c, priceLowest = l, priceHighest = h)
+   prevCloseList <- fromJSON(URL)
+   prevCloseData <- prevCloseList$results %>% select(ticker = T, volume = v, priceOpen = o, priceClose = c, priceLowest = l, priceHighest = h)
 
-   return(rawData)   
+   return(prevCloseData)   
 }
 
 #Sample Function Call
-kable(getPreviousClose("BTCUSD"))
+kable(getPreviousClose("ETHUSD"))
 ```
 
-| ticker   |  volume | priceOpen | priceClose | priceLowest | priceHighest |
-| :------- | ------: | --------: | ---------: | ----------: | -----------: |
-| X:BTCUSD | 38375.5 |  43828.89 |   48165.76 |    43287.44 |        48500 |
+| ticker   |   volume | priceOpen | priceClose | priceLowest | priceHighest |
+| :------- | -------: | --------: | ---------: | ----------: | -----------: |
+| X:ETHUSD | 232535.8 |    3311.2 |    3390.26 |      3258.9 |       3471.7 |
 
-## `getAggregates`
+## (6) `getAggregates`
 
 **Description:** Function to get 1-year aggregate data for a
 cryptocurrency pair ending at a given date
@@ -208,58 +240,23 @@ cryptocurrency pair ending at a given date
 as daily volume and price
 
 ``` r
-getAggregates <- function(date=Sys.Date(), name="", ticker){
+getAggregates <- function(date=Sys.Date(), ticker){
 
    # Retrieve the date 1 year prior to the input date
    dayEnd <- as.Date(date)
    dayStart <- dayEnd - 364
    
-   reference <- cbind(c("BTCUSD", "ETHUSD", "ADAUSD", "XRPUSD"),
-                      c("BITCOIN", "ETHEREUM", "CARDANO", "XRP")
-                     )
-   
-   # Allow user to specify either the crypto currency name or the ticker name
-   if (name != ""){
-   symbol <- switch(toupper(name),
-                    BITCOIN = "BTCUSD",
-                    ETHEREUM = "ETHUSD",
-                    CARDANO = "ADAUSD",
-                    XRP = "XRPUSD",
-                    SOLANA = "SOLUSD",
-                    POLKADOT = "DOTUSD",
-                    DOGECOIN = "DOGEUSD",
-                    UNISWAP = "UNIUSD",
-                    CHAINLINK = "LINKUSD",
-                    LITECOIN = "LTCUSD",
-                    )
-   } else if (ticker != ""){
-     symbol <- toupper(ticker)
-   } 
-   
-   if (symbol == ""){
-      message <- paste("ERROR: Only the top 10 cryptocurrencies by market cap are supported,", 
-                       "please input another name, or use the `ticker` and input a valid Crypto ticker")
-      stop(message)
-      
-   }else if (!(paste0("X:", symbol) %in% dailyMarket$ticker)){
-      message <- "ERROR: Symbol not supported. Please input a valid symbol"
-      
-      stop(message)
-   }
-   
-   
    # Build the URL
    baseURL <- "https://api.polygon.io/v2/aggs/ticker/"
-   ticker <- paste0("X:", symbol, "/")
+   symbol <- paste0("X:", ticker, "/")
    range <- "range/1/day/"
    otherSettings <- "?adjusted=true&sort=asc&limit=365"
    key <- paste0("&apiKey=", APIkey)
-   URL <- paste0(baseURL, ticker, range, dayStart, "/", dayEnd, otherSettings, key)
+   URL <- paste0(baseURL, symbol, range, dayStart, "/", dayEnd, otherSettings, key)
    
-
    # Use the URL to retrieve data from API
-   rawList <- fromJSON(URL)
-   rawData <- rawList$results
+   aggregateList <- fromJSON(URL)
+   aggregateData <- aggregateList$results
    
    # Select Variables for the output dataset
    date_range <- as.Date(c(dayStart:dayEnd), origin = "1970-01-01")
@@ -267,13 +264,13 @@ getAggregates <- function(date=Sys.Date(), name="", ticker){
    # Get the Quarter of the date
    qtr <- paste0(year(date_range), " Q", quarter(date_range))
    
-   cryptoData <- data.frame(qtr, date_range, rawData$v, rawData$o, rawData$c)
+   cryptoData <- data.frame(qtr, date_range, aggregateData$v, aggregateData$o, aggregateData$c)
    colnames(cryptoData) <- c("quarter", "date", "volume", "priceOpen", "priceClose")
    
    return(cryptoData)
 }
 
-bitcoinData <- getAggregates("2021-09-30", name="bitcoin")
+bitcoinData <- getAggregates("2021-09-30", ticker="BTCUSD")
 
 kable(head(bitcoinData, n=5))
 ```
@@ -285,6 +282,115 @@ kable(head(bitcoinData, n=5))
 | 2020 Q4 | 2020-10-03 | 27705.14 |  10586.00 |   10551.65 |
 | 2020 Q4 | 2020-10-04 | 23021.75 |  10550.32 |   10671.11 |
 | 2020 Q4 | 2020-10-05 | 37483.09 |  10669.00 |   10799.00 |
+
+## (7)\[Wrapper\] `cryptoAPI`
+
+**Description:** Wrapper function to call any of the 6 functions above
+
+**Input:** The `func` parameter can take either the function id (1-6) or
+the function name (in quotes), Additional parameters needed for the
+specific function can be passed in at the end
+
+**Output:** Returns the output from the specific function called
+
+``` r
+cryptoAPI <- function(func, name="", ticker="", date=Sys.Date()){
+   
+   if (is.numeric(func)){
+      if (!between(func, 1, 6)){
+         stop("ERROR: There are only 6 functions. Please input a valid function ID (1 to 6)")
+      } else{
+        func <- switch(func,
+                    "getExchange",
+                    "getNews",
+                    "getDailyMarket",
+                    "getTickerDetails",
+                    "getPreviousClose",
+                    "getAggregates")
+      } 
+   }
+   
+   if (name != "" | ticker != ""){
+   
+      # Allow user to specify either the crypto currency name or the ticker name
+      if (name != ""){
+      symbol <- switch(toupper(name),
+                       BITCOIN = "BTCUSD",
+                       ETHEREUM = "ETHUSD",
+                       CARDANO = "ADAUSD",
+                       XRP = "XRPUSD",
+                       SOLANA = "SOLUSD",
+                       POLKADOT = "DOTUSD",
+                       DOGECOIN = "DOGEUSD",
+                       UNISWAP = "UNIUSD",
+                       CHAINLINK = "LINKUSD",
+                       LITECOIN = "LTCUSD",
+                       )
+      } else if (ticker != ""){
+        symbol <- toupper(ticker)
+      } else{
+         stop("ERROR: Please input a valid cryptocurrency name or ticker")
+      }
+      
+
+      if (symbol == ""){
+         message <- paste("ERROR: Only the top 10 cryptocurrencies by market cap are supported,", 
+                          "please input another name, or use the `ticker` and input a valid Crypto ticker")
+         stop(message)
+         
+      }else if (!(paste0("X:", symbol) %in% getDailyMarket()$ticker)){
+         message <- "ERROR: ticker not supported. Please input a valid ticker"
+         
+         stop(message)
+      }
+      
+   }else if(name == "" & ticker == "" & func %in% c("getTickerDetails", "getPreviousClose", "getAggregates")){
+      stop("ERROR: Missing cryptocurrency name or ticker input required for this function")
+   }   
+   
+   
+   # Function 1
+   if (func == "getExchange"){
+      output <- getExchange()
+   
+   # Function 2      
+   }else if (func == "getNews"){
+      output <- getNews()
+      
+   # Function 3   
+   }else if (func == "getDailyMarket"){
+      output <- getDailyMarket(date)
+   
+   # Function 4      
+   }else if (func == "getTickerDetails"){
+      output <- getTickerDetails(symbol)
+   
+   # Function 5   
+   }else if (func == "getPreviousClose"){
+      output <- getPreviousClose(symbol)
+   
+   # Function 6      
+   }else if (func == "getAggregates"){
+      output <- getAggregates(date, symbol)
+      
+   }else{
+      stop("ERROR: The `func` argument is not valid")
+   }
+   
+   return(output)
+}
+```
+
+The following are examples of valid functions calls:
+
+``` r
+cryptoAPI(1)
+cryptoAPI("getNews")
+cryptoAPI(3)
+cryptoAPI("getTickerDetails", name="cardano")
+cryptoAPI(5, ticker="ethusd")
+cryptoAPI(6, name="eThErEuM")
+```
 
 # Data Exploration
 
