@@ -346,6 +346,10 @@ cryptoAPI(6, name="eThErEuM")
 ```
 
   
+```{r pause 60s, include=FALSE}
+Sys.sleep(60)
+```
+  
 # Data Exploration
 
 ```{r percent change, include=FALSE}

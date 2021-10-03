@@ -16,7 +16,8 @@ Joey Chen
       - [(6) `getAggregates`](#getaggregates)
       - [(7)\[Wrapper\] `cryptoAPI`](#wrapper-cryptoapi)
   - [Data Exploration](#data-exploration)
-      - [Bitcoin Trading Volume](#bitcoin-trading-volume)
+      - [Bitcoin Market Behavior](#bitcoin-market-behavior)
+      - [Bitcoin vs Ethereum](#bitcoin-vs-ethereum)
   - [Conclusion](#conclusion)
 
 <img src="images/crypto.jpg" width="527" />
@@ -151,8 +152,7 @@ getDailyMarket <- function(date=Sys.Date()){
 }
 
 # Sample Function Call
-dailyMarket <- getDailyMarket("2021-09-30")
-kable(head(dailyMarket, n=5))
+kable(head(getDailyMarket("2021-09-30"), n=5))
 ```
 
 | ticker    |       volume |   priceOpen |  priceClose |
@@ -270,9 +270,7 @@ getAggregates <- function(date=Sys.Date(), ticker){
    return(cryptoData)
 }
 
-bitcoinData <- getAggregates("2021-09-30", ticker="BTCUSD")
-
-kable(head(bitcoinData, n=5))
+kable(head(getAggregates("2021-09-30", ticker="BTCUSD"), n=5))
 ```
 
 | quarter | date       |   volume | priceOpen | priceClose |
@@ -289,7 +287,7 @@ kable(head(bitcoinData, n=5))
 
 **Input:** The `func` parameter can take either the function id (1-6) or
 the function name (in quotes), Additional parameters needed for the
-specific function can be passed in at the end
+specific function can also be passed in
 
 **Output:** Returns the output from the specific function called
 
@@ -394,28 +392,7 @@ cryptoAPI(6, name="eThErEuM")
 
 # Data Exploration
 
-``` r
-# Calculate percent change
-price <- bitcoinData$`Closing Price`
-
-change1Day <- (price[366] - price[365]) / price[365]
-change7Day <- (price[366] - price[359]) / price[359]
-change30Day <-(price[366] - price[336]) / price[336]
-change365Day <- (price[366] - price[1]) / price[1]
-
-kable(cbind(price[366], change1Day, change7Day, change30Day, change365Day), nrow=1)
-```
-
-|  | change1Day | change7Day | change30Day | change365Day |
-| -: | ---------: | ---------: | ----------: | -----------: |
-
-``` r
-plot(x=bitcoinData$date, y= bitcoinData$priceClose)
-```
-
-![](README_files/figure-gfm/pctchg-1.png)<!-- -->
-
-## Bitcoin Trading Volume
+## Bitcoin Market Behavior
 
 We can examine the Bitcoin trading Volume by looking at the Box plot.
 
@@ -431,5 +408,48 @@ ggplot(bitcoinData, aes(quarter, volume)) +
 ```
 
 ![](README_files/figure-gfm/Boxplot-1.png)<!-- -->
+
+## Bitcoin vs Ethereum
+
+<img src="images/bitcoin_vs_ethereum.jpg" width="848" />
+
+Ethereum, the second largest cryptocurrency by market cap, is often
+compared to Bitcoin. As of 2021-10-02, Bitcoin has a market cap of $900
+million, while Ethereum has a market cap of $400 million. We can first
+look at the performance of the two cryptocurrencies over the past year.
+
+``` r
+ethereumData <- cryptoAPI(6, name="Ethereum", date="2021-09-30")
+
+calcPerformance <- function(price){
+
+   change1Day <- scales::percent((price[365] - price[364]) / price[364], accuracy=0.1)
+   change7Day <- scales::percent((price[365] - price[358]) / price[358], accuracy=0.1)
+   change30Day <-scales::percent((price[365] - price[335]) / price[335], accuracy=0.1)
+   changeYear <- scales::percent((price[365] - price[1]) / price[1], accuracy=0.1)
+   
+   scales::label_percent(c(change1Day, change7Day))
+   
+   performanceData <- cbind(price = price[365], '24h %' = change1Day, '7d %' = change7Day, '30d %' = change30Day, 'yr %' = changeYear)
+   
+   return(performanceData)
+}
+
+bitcoinPerformance <- cbind(cryptocurrency = "Bitcoin", calcPerformance(bitcoinData$priceClose))
+ethereumPerformance <- cbind(cryptocurrency = "Ethereum", calcPerformance(ethereumData$priceClose))
+
+kable(rbind(bitcoinPerformance, ethereumPerformance))
+```
+
+| cryptocurrency | price    | 24h % | 7d %   | 30d %   | yr %   |
+| :------------- | :------- | :---- | :----- | :------ | :----- |
+| Bitcoin        | 43770.97 | 5.4%  | \-2.5% | \-7.1%  | 312.3% |
+| Ethereum       | 3000.28  | 5.3%  | \-4.9% | \-12.5% | 749.9% |
+
+``` r
+plot(x=bitcoinData$priceClose, y=ethereumData$priceClose)
+```
+
+![](README_files/figure-gfm/BTC%20ETH%20scatterplot-1.png)<!-- -->
 
 # Conclusion
