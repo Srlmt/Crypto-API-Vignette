@@ -1,5 +1,5 @@
 ---
-title: "Interacting with Cryptocurrency API"
+title: "Using R to Interact with Cryptocurrency API"
 author: "Joey Chen"
 date: "10/5/2021"
 ---
@@ -13,17 +13,19 @@ library(lubridate)
 APIkey="r87x5acIqxjYxZWZ31xO3dxUjQGVlja6"
 ```
 
-```{r graphics_crypto, echo=FALSE}
+```{r graphics crypto intro, echo=FALSE}
 include_graphics(path="images/crypto.jpg")
 ```
 
 # Introduction
 
-Brief Intro Here...
+Cryptocurrencies have gained traction over the past couple or years. As the trend continues, some may want to perform data exploration or analysis. 
+
+This document will go over the processes of using R to interact with the cryptocurrency [Application Programming Interface (API)](https://www.mulesoft.com/resources/api/what-is-an-api). It will go over the requirements and useful functions, followed by data exploration examples and conclusion.
 
 # Requirements
 
-```{r graphics_packages, echo=FALSE}
+```{r graphics packages, echo=FALSE}
 include_graphics(path="images/packages.png")
 ```
 
@@ -31,10 +33,10 @@ include_graphics(path="images/packages.png")
 
 The following packages are required to use the API function:
 
-  + `tidyverse`: Useful data tools for transforming and visualizing data
-  + `jsonlite`: Interact and download data with API
-  + `knitr`: Display well-formatted tables
-  + `lubridate`: Useful date functions 
+  + [`tidyverse`](https://www.tidyverse.org/): Useful data tools for transforming and visualizing data
+  + [`jsonlite`](https://cran.r-project.org/web/packages/jsonlite/vignettes/json-aaquickstart.html): Interact and download data with API
+  + [`knitr`](https://cran.r-project.org/web/packages/knitr/index.html): Display well-formatted tables
+  + [`lubridate`](https://lubridate.tidyverse.org/): Useful date functions (part of `tidyverse`)
 
 ### API Key
 
@@ -46,7 +48,12 @@ APIkey = "insert_key_here"
 
 # Functions to Interact with API
 
-5 API Calls / Minute
+I have created 6 useful functions and a separate wrapper function to conveniently call any of the 6 functions. Each of the functions would return an R data frame that can be readily used. The functions modify URLs to call the API and retrieve data from different parts of the API.
+
+Please keep in mind that this API is limited to **5 API Calls / Minute**. R would return an error if that is exceeded. 
+
+We will now go over the functions:  
+
   
 ## (1) `getExchange` 
 
@@ -95,6 +102,8 @@ getNews <- function(){
    
    # Use the URL to retrieve data from API
    newsList <- fromJSON(URL)
+   
+   # Select meaningful variables from the `results` table
    newsData <- newsList$results %>% select(publisher, title, author, published_utc, article_url)
    
    return(newsData)
@@ -111,7 +120,7 @@ kable(head(getNews(), n=3))
 
 **Input:** Date in "YYYY-MM-DD" format
 
-**Output:** Returns a table of containing crypto market information for the input date
+**Output:** Returns a table of containing crypto market information on the input date
 
 ```{r DailyMarket}
 getDailyMarket <- function(date=Sys.Date()){
@@ -123,12 +132,12 @@ getDailyMarket <- function(date=Sys.Date()){
    URL <- paste0(baseURL, day, key)
    
    # Use the URL to retrieve data from API
-   rawList <- fromJSON(URL)
-   rawData <- rawList$results
+   dailyMarketList <- fromJSON(URL)
    
-   marketData <- rawData %>% select(ticker = T, volume = v, priceOpen = o, priceClose = c)
+    # Select meaningful variables from the `results` table
+   dailyMarketData <- dailyMarketList$results %>% select(ticker = T, volume = v, priceOpen = o, priceClose = c)
    
-   return(marketData)
+   return(dailyMarketData)
 }
 
 # Sample Function Call
@@ -156,6 +165,8 @@ getTickerDetails <- function(ticker){
    
    # Use the URL to retrieve data from API
    tickerList <- fromJSON(URL)
+   
+   # Select meaningful variables from the `results` table
    tickerData <- as.data.frame(tickerList$results) %>% select(ticker, name, market, locale, currency_name, base_currency_symbol, base_currency_name)
    
    return(tickerData)
@@ -185,6 +196,8 @@ getPreviousClose <- function(ticker){
    
    # Use the URL to retrieve data from API
    prevCloseList <- fromJSON(URL)
+   
+   # Select meaningful variables from the `results` table
    prevCloseData <- prevCloseList$results %>% select(ticker = T, volume = v, priceOpen = o, priceClose = c, priceLowest = l, priceHighest = h)
 
    return(prevCloseData)   
@@ -222,10 +235,10 @@ getAggregates <- function(date=Sys.Date(), ticker){
    aggregateList <- fromJSON(URL)
    aggregateData <- aggregateList$results
    
-   # Select Variables for the output dataset
+   # The table from API does not have the date, so we will create it
    date_range <- as.Date(c(dayStart:dayEnd), origin = "1970-01-01")
    
-   # Get the Quarter of the date
+   # Get the Quarter of the date (from lubridate package)
    qtr <- paste0(year(date_range), " Q", quarter(date_range))
    
    cryptoData <- data.frame(qtr, date_range, aggregateData$v, aggregateData$o, aggregateData$c)
@@ -240,15 +253,20 @@ kable(head(getAggregates("2021-09-30", ticker="BTCUSD"), n=5))
   
 ## (7)[Wrapper] `cryptoAPI`
 
-**Description:** Wrapper function to call any of the 6 functions above
+**Description:** Wrapper function to call any of the 6 functions above. 
 
-**Input:** The `func` parameter can take either the function id (1-6) or the function name (in quotes), Additional parameters needed for the specific function can also be passed in
+**Input:** The `func` parameter can take either the function id (1-6) or the function name (in quotes). 
+
+For functions that need the `ticker` variable, you can supply either the `name` or the `ticker` argument. Examples of `name` are "bitcoin" or "ETHEREUM", and examples of `ticker` are "btcusd" "ethUSD". The letter case do not matter since they will be converted and mapped correctly within the function. 
 
 **Output:** Returns the output from the specific function called
 
 ```{r wrapper}
 cryptoAPI <- function(func, name="", ticker="", date=Sys.Date()){
    
+   # Check if `func` is numeric (1-6)
+   # If it is outside of (1-6), return an error message
+   # If it is within 1 to 6, map to the corresponding function
    if (is.numeric(func)){
       if (!between(func, 1, 6)){
          stop("ERROR: There are only 6 functions. Please input a valid function ID (1 to 6)")
@@ -263,9 +281,13 @@ cryptoAPI <- function(func, name="", ticker="", date=Sys.Date()){
       } 
    }
    
+   # Check to see if either `name` or `ticker` is provided
+   # Some functions do not require these arguments
    if (name != "" | ticker != ""){
    
       # Allow user to specify either the crypto currency name or the ticker name
+      # Map the name to the corresponding ticker
+      # Only the top 10 cryptocurrencies (by market cap) are supported
       if (name != ""){
       symbol <- switch(toupper(name),
                        BITCOIN = "BTCUSD",
@@ -281,22 +303,19 @@ cryptoAPI <- function(func, name="", ticker="", date=Sys.Date()){
                        )
       } else if (ticker != ""){
         symbol <- toupper(ticker)
-      } else{
-         stop("ERROR: Please input a valid cryptocurrency name or ticker")
-      }
+      } 
       
-
+      # Check to see if the ticker is mapped correctly
       if (symbol == ""){
          message <- paste("ERROR: Only the top 10 cryptocurrencies by market cap are supported,", 
                           "please input another name, or use the `ticker` and input a valid Crypto ticker")
          stop(message)
          
-      }else if (!(paste0("X:", symbol) %in% getDailyMarket()$ticker)){
-         message <- "ERROR: ticker not supported. Please input a valid ticker"
-         
-         stop(message)
+      # Use function 3 `getDailyMarket` to check for valid ticker names
       }
       
+   
+   # For functions that require the input, check to see if the ticker is mapped correctly      
    }else if(name == "" & ticker == "" & func %in% c("getTickerDetails", "getPreviousClose", "getAggregates")){
       stop("ERROR: Missing cryptocurrency name or ticker input required for this function")
    }   
@@ -325,7 +344,8 @@ cryptoAPI <- function(func, name="", ticker="", date=Sys.Date()){
    # Function 6      
    }else if (func == "getAggregates"){
       output <- getAggregates(date, symbol)
-      
+   
+   # Return error message if the function name is not mapped correctly   
    }else{
       stop("ERROR: The `func` argument is not valid")
    }
@@ -347,38 +367,61 @@ cryptoAPI(6, name="eThErEuM")
 
   
 ```{r pause 60s, include=FALSE}
+# This is for the RMarkdown render to pause 60 seconds when reaching this point
+# Since the API limit is 5 Calls / Minute, we have called the API 5 times above
+# Waiting 1 minute would allow us to continue calling the API later in the document
 Sys.sleep(60)
 ```
   
 # Data Exploration
 
-```{r percent change, include=FALSE}
-bitcoinData <- cryptoAPI("getAggregates", name="Bitcoin", date="2021-09-30")
+We will now use some of the above functions to retrieve data from the API and perform some data exploration. 
 
-# Calculate percent change
-price <- bitcoinData$`Closing Price`
+## Top Cryptocurrencies
 
+```{r graphics crypto market, echo=FALSE, out.width="400px"}
+include_graphics(path="images/crypto.jpg")
+```
 
-  
-plot(x=bitcoinData$date, y= bitcoinData$priceClose)
+We can first look at 6 of the top cryptocurrencies by market cap. We will calculate the YTD price change by using "2021-01-01" as the baseline date and "2021-09-30" as the comparison date. We can use the `cryptoAPI` wrapper function to call the `getDailyMarket` function using the two dates. Then we can merge the two datasets and calculate the YTD change. 
 
+```{r Crypto Market, include=FALSE}
+# Call the wrapper function and specify the desired function name 
+marketBaseline <- cryptoAPI("getDailyMarket", date="2021-01-01") 
+
+# Alternative way to call the API using the function ID
+marketCurrent <- cryptoAPI(3, date="2021-09-30")
+
+# Merge the two datasets from API
+# Only get the 6 Top cryptocurrencies
+# Calculate percent change and map the tickers to their respective cryptocurrency names
+marketData <- merge(marketBaseline, marketCurrent, by="ticker") %>%
+                  filter(ticker %in% c("X:BTCUSD", "X:ETHUSD", "X:ADAUSD", "X:XRPUSD", "X:DOGEUSD", "X:LTCUSD")) %>%
+                  select(ticker, priceBase = priceClose.x, priceCurrent = priceClose.y) %>%
+                  mutate(pctChange = (priceCurrent - priceBase) / priceBase,
+                         cryptoCurrency = ifelse(ticker=="X:BTCUSD", "Bitcoin",
+                                ifelse(ticker=="X:ETHUSD", "Ethereum",
+                                ifelse(ticker=="X:ADAUSD", "Cardano",
+                                ifelse(ticker=="X:XRPUSD", "XRP",
+                                ifelse(ticker=="X:DOGEUSD", "Dogecoin",
+                                ifelse(ticker=="X:LTCUSD", "Litecoin", "Check Ticker")))))))
+# Show data
+kable(marketData)
 ```
   
+Now we can visualize the data by creating a bar plot of the YTD change.
   
-## Bitcoin Market Behavior
-
-We can examine the Bitcoin trading Volume by looking at the Box plot. 
-
-```{r Boxplot}
-ggplot(bitcoinData, aes(quarter, volume)) +
-   geom_boxplot(size=1) +
-   geom_jitter(aes(y=volume, fill=quarter, color=quarter), size=2) +
-   labs(title="Boxplot for Bitcoin Trading Volume by Quarter") +
-   theme(text=element_text(size=16), 
-         panel.grid.major = element_line(size=1.5),
-         axis.ticks = element_line(size=1.4),
-         axis.ticks.length = unit(0.20, 'cm'))
+```{r barplot}
+ggplot(marketData, aes(x=cryptoCurrency, y=pctChange, fill=cryptoCurrency)) +
+   geom_bar(stat="identity") +
+   scale_y_continuous(labels = scales::percent) +
+   labs(title="YTD Price Change as of 2021-09-30 in 6 Top Cryptocurrencies", 
+        y="YTD % Change") +
+   theme(text=element_text(size=14),
+         legend.position = "none")
 ```
+From the graph we can see that Dogecoin has the highest YTD change by far, with approximately +3500% increase. Cardano also has a large YTD change with over 1000% increase. In contrast, Bitcoin and Litecoin has the lowest YTD change. 
+  
   
 ## Bitcoin vs Ethereum
 
@@ -386,9 +429,10 @@ ggplot(bitcoinData, aes(quarter, volume)) +
 include_graphics(path="images/bitcoin_vs_ethereum.jpg")
 ```
 
-Ethereum, the second largest cryptocurrency by market cap, is often compared to Bitcoin. As of 2021-10-02, Bitcoin has a market cap of \$900 million, while Ethereum has a market cap of \$400 million. We can  first look at the performance of the two cryptocurrencies over the past year. 
+Ethereum, the second largest cryptocurrency by market cap, is often compared to Bitcoin. As of 2021-10-02, Bitcoin has a market cap of \$900 million, while Ethereum has a market cap of \$400 million. We can  first look at the performance of the two cryptocurrencies over the past year. We will grab the 1 year data ending on "2021-09-30" from the API, since that would give us 4 complete quarters. 
 
 ```{r BTC ETH performance}
+bitcoinData <- cryptoAPI("getAggregates", name="Bitcoin", date="2021-09-30")
 ethereumData <- cryptoAPI(6, name="Ethereum", date="2021-09-30")
 
 calcPerformance <- function(price){
@@ -409,10 +453,76 @@ bitcoinPerformance <- cbind(cryptocurrency = "Bitcoin", calcPerformance(bitcoinD
 ethereumPerformance <- cbind(cryptocurrency = "Ethereum", calcPerformance(ethereumData$priceClose))
 
 kable(rbind(bitcoinPerformance, ethereumPerformance))
-
 ```
-```{r BTC ETH scatterplot}
-plot(x=bitcoinData$priceClose, y=ethereumData$priceClose)
+
+
+```{r}
+bitcoinData$cryptoCurrency <- "Bitcoin"
+ethereumData$cryptoCurrency <- "Ethereum"
+
+combinedData <- rbind(bitcoinData, ethereumData)
+combinedData$dayPerformance <- ifelse(combinedData$priceClose - combinedData$priceOpen >= 0, "Gain", "Loss")
+combinedData$dayChange <- scales::percent((combinedData$priceClose - combinedData$priceOpen) / combinedData$priceOpen, accuracy=0.01)
+
+
+table(combinedData$quarter, combinedData$dayPerformance, combinedData$cryptoCurrency)
+```
+
+
+
+
+
+```{r boxplots}
+ggplot(filter(combinedData, cryptoCurrency=="Bitcoin"), aes(quarter, volume)) +
+   geom_boxplot(size=1) +
+   geom_jitter(aes(y=volume, fill=dayPerformance, color=dayPerformance), size=2) +
+   labs(title="Boxplot for Bitcoin Trading Volume by Quarter") +
+   theme(text=element_text(size=16), 
+         panel.grid.major = element_line(size=1.5),
+         axis.ticks = element_line(size=1.4),
+         axis.ticks.length = unit(0.20, 'cm')) +
+   scale_color_manual(values = c("Gain" = "lightgreen", "Loss" = "red"))
+
+ggplot(filter(combinedData, cryptoCurrency=="Ethereum"), aes(quarter, volume)) +
+   geom_boxplot(size=1) +
+   geom_jitter(aes(y=volume, fill=dayPerformance, color=dayPerformance), size=2) +
+   labs(title="Boxplot for Ethereum Trading Volume by Quarter") +
+   theme(text=element_text(size=16), 
+         panel.grid.major = element_line(size=1.5),
+         axis.ticks = element_line(size=1.4),
+         axis.ticks.length = unit(0.20, 'cm')) +
+   scale_color_manual(values = c("Gain" = "lightgreen", "Loss" = "red"))
+```
+
+
+
+
+
+
+
+
+
+```{r correlation}
+scatterData <- data.frame(quarter = bitcoinData$quarter, bitcoin = bitcoinData$priceClose, ethereum = ethereumData$priceClose)
+
+ggplot(scatterData, aes(x=ethereum, y=bitcoin)) +
+   geom_point(aes(col=quarter)) + 
+   geom_smooth(method=lm)
+
+R <- cor(x=scatterData$bitcoin, y=scatterData$ethereum)
+R2 <- R^2
+
+correlation <- data.frame(R=R, R2=R2)
+kable(correlation, digits=4)
+```
+
+
+```{r price by volume plot}
+ggplot(filter(combinedData, cryptoCurrency=="Bitcoin")) +   
+   geom_line(aes(x=date, y=priceClose, stat="identity")) +
+   geom_bar(aes(x=date, y=volume/8, fill=dayPerformance), stat="identity") +
+   scale_y_continuous(sec.axis = sec_axis(~ .*8, name="Volume")) +
+   scale_fill_manual(values = c("Gain" = "lightgreen", "Loss" = "red"))
 ```
 
 # Conclusion
