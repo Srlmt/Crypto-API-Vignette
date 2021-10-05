@@ -16,7 +16,9 @@ Joey Chen
       - [(6) `getAggregates`](#getaggregates)
       - [(7)\[Wrapper\] `cryptoAPI`](#wrapper-cryptoapi)
   - [Data Exploration](#data-exploration)
-      - [Top Cryptocurrencies](#top-cryptocurrencies)
+      - [YTD Performance of Top
+        Cryptocurrencies](#ytd-performance-of-top-cryptocurrencies)
+      - [Bitcoin Performance](#bitcoin-performance)
       - [Bitcoin vs Ethereum](#bitcoin-vs-ethereum)
   - [Conclusion](#conclusion)
 
@@ -24,15 +26,17 @@ Joey Chen
 
 # Introduction
 
-Cryptocurrencies have gained traction over the past couple or years. As
-the trend continues, some may want to perform data exploration or
-analysis.
+Cryptocurrencies have gained traction over the past couple of years. As
+the trend continues, some may be interested in performing data
+exploration or analysis. To start, we will need data to work with.
+[polygon.io](https://polygon.io/) provides free access to financial
+data, which includes Cryptocurrency data. We can access these data by
+interacting with the [Application Programming Interface
+(API)](https://www.mulesoft.com/resources/api/what-is-an-api).
 
 This document will go over the processes of using R to interact with the
-cryptocurrency [Application Programming Interface
-(API)](https://www.mulesoft.com/resources/api/what-is-an-api). It will
-go over the requirements and useful functions, followed by data
-exploration examples and conclusion.
+cryptocurrency API. It will go over the requirements and useful
+functions, followed by data exploration examples and conclusion.
 
 # Requirements
 
@@ -150,13 +154,14 @@ kable(head(getNews(), n=3))
 **Description:** Function to get the daily grouped data for the entire
 Crypto market
 
-**Input:** Date in “YYYY-MM-DD” format
+**Input:** Date in “YYYY-MM-DD” format. The default is the day before
+system date.
 
 **Output:** Returns a table of containing crypto market information on
 the input date
 
 ``` r
-getDailyMarket <- function(date=Sys.Date()){
+getDailyMarket <- function(date=Sys.Date()-1){
 
    # Build the URL
    baseURL <- "https://api.polygon.io/v2/aggs/grouped/locale/global/market/crypto/"
@@ -177,13 +182,13 @@ getDailyMarket <- function(date=Sys.Date()){
 kable(head(getDailyMarket("2021-09-30"), n=5))
 ```
 
-| ticker    |       volume |   priceOpen |  priceClose |
-| :-------- | -----------: | ----------: | ----------: |
-| X:ICPUSD  |    539819.67 |    44.40000 |    45.08400 |
-| X:LTCEUR  |     54319.85 |   124.85000 |   132.23000 |
-| X:MANAUSD |   6227804.05 |     0.64500 |     0.68900 |
-| X:IOTXUSD | 109464846.00 |     0.06025 |     0.06036 |
-| X:BTCUSD  |     28947.92 | 41519.11000 | 43770.97000 |
+| ticker    |      volume |  priceOpen | priceClose |
+| :-------- | ----------: | ---------: | ---------: |
+| X:ICPUSD  |    539819.7 |  44.400000 |  45.084000 |
+| X:XLMUSD  | 127436391.1 |   0.269729 |   0.278615 |
+| X:COMPUSD |    120354.6 | 307.380000 | 318.200000 |
+| X:MANAUSD |   6227804.0 |   0.645000 |   0.689000 |
+| X:IOTXUSD | 109464846.0 |   0.060250 |   0.060360 |
 
 ## (4) `getTickerDetails`
 
@@ -253,7 +258,7 @@ kable(getPreviousClose("ETHUSD"))
 
 | ticker   |   volume | priceOpen | priceClose | priceLowest | priceHighest |
 | :------- | -------: | --------: | ---------: | ----------: | -----------: |
-| X:ETHUSD | 183444.4 |   3388.67 |    3418.94 |     3342.52 |         3490 |
+| X:ETHUSD | 241097.7 |  3419.666 |     3387.2 |      3268.4 |       3441.3 |
 
 ## (6) `getAggregates`
 
@@ -266,7 +271,7 @@ cryptocurrency pair ending at a given date
 as daily volume and price
 
 ``` r
-getAggregates <- function(date=Sys.Date(), ticker){
+getAggregates <- function(date=Sys.Date()-1, ticker){
 
    # Retrieve the date 1 year prior to the input date
    dayEnd <- as.Date(date)
@@ -316,14 +321,14 @@ the function name (in quotes).
 
 For functions that need the `ticker` variable, you can supply either the
 `name` or the `ticker` argument. Examples of `name` are “bitcoin” or
-“ETHEREUM”, and examples of `ticker` are “btcusd” “ethUSD”. The letter
-case do not matter since they will be converted and mapped correctly
-within the function.
+“ETHEREUM”, and examples of `ticker` are “btcusd” or “ethUSD”. The
+letter case do not matter since they will be converted and mapped
+correctly within the function.
 
 **Output:** Returns the output from the specific function called
 
 ``` r
-cryptoAPI <- function(func, name="", ticker="", date=Sys.Date()){
+cryptoAPI <- function(func, name="", ticker="", date=Sys.Date()-1){
    
    # Check if `func` is numeric (1-6)
    # If it is outside of (1-6), return an error message
@@ -431,9 +436,9 @@ cryptoAPI(6, name="eThErEuM")
 We will now use some of the above functions to retrieve data from the
 API and perform some data exploration.
 
-## Top Cryptocurrencies
+## YTD Performance of Top Cryptocurrencies
 
-<img src="images/crypto.jpg" width="400px" />
+<img src="images/cryptocurrency-market.jpg" width="500px" />
 
 We can first look at 6 of the top cryptocurrencies by market cap. We
 will calculate the YTD price change by using “2021-01-01” as the
@@ -442,22 +447,147 @@ baseline date and “2021-09-30” as the comparison date. We can use the
 the two dates. Then we can merge the two datasets and calculate the YTD
 change.
 
+``` r
+# Call the wrapper function and specify the desired function name 
+marketBaseline <- cryptoAPI("getDailyMarket", date="2021-01-01") 
+
+# Alternative way to call the API using the function ID
+marketCurrent <- cryptoAPI(3, date="2021-09-30")
+
+# Merge the two datasets from API
+# Only get the 6 Top cryptocurrencies
+# Calculate percent change and map the tickers to their respective cryptocurrency names
+marketData <- merge(marketBaseline, marketCurrent, by="ticker") %>%
+                  filter(ticker %in% c("X:BTCUSD", "X:ETHUSD", "X:ADAUSD", "X:XRPUSD", "X:DOGEUSD", "X:LTCUSD")) %>%
+                  select(ticker, priceBase = priceClose.x, priceCurrent = priceClose.y) %>%
+                  mutate(pctChange = (priceCurrent - priceBase) / priceBase,
+                         cryptoCurrency = ifelse(ticker=="X:BTCUSD", "Bitcoin",
+                                ifelse(ticker=="X:ETHUSD", "Ethereum",
+                                ifelse(ticker=="X:ADAUSD", "Cardano",
+                                ifelse(ticker=="X:XRPUSD", "XRP",
+                                ifelse(ticker=="X:DOGEUSD", "Dogecoin",
+                                ifelse(ticker=="X:LTCUSD", "Litecoin", "Check Ticker")))))))
+# Show data
+kable(marketData)
+```
+
+| ticker    |    priceBase | priceCurrent |  pctChange | cryptoCurrency |
+| :-------- | -----------: | -----------: | ---------: | :------------- |
+| X:ADAUSD  | 1.751540e-01 |      2.11370 | 11.0676662 | Cardano        |
+| X:BTCUSD  | 2.941284e+04 |  43770.97000 |  0.4881586 | Bitcoin        |
+| X:DOGEUSD | 5.707900e-03 |      0.20420 | 34.7749785 | Dogecoin       |
+| X:ETHUSD  | 7.308500e+02 |   3000.28000 |  3.1051926 | Ethereum       |
+| X:LTCUSD  | 1.265300e+02 |    153.19000 |  0.2107010 | Litecoin       |
+| X:XRPUSD  | 2.376500e-01 |      0.95254 |  3.0081633 | XRP            |
+
 Now we can visualize the data by creating a bar plot of the YTD change.
 
 ``` r
 ggplot(marketData, aes(x=cryptoCurrency, y=pctChange, fill=cryptoCurrency)) +
    geom_bar(stat="identity") +
    scale_y_continuous(labels = scales::percent) +
+   theme(text=element_text(size=12),
+         legend.position = "none") +
    labs(title="YTD Price Change as of 2021-09-30 in 6 Top Cryptocurrencies", 
-        y="YTD % Change") +
-   theme(text=element_text(size=14),
-         legend.position = "none")
+        y="YTD % Change")
 ```
 
-![](README_files/figure-gfm/barplot-1.png)<!-- --> From the graph we can
-see that Dogecoin has the highest YTD change by far, with approximately
-+3500% increase. Cardano also has a large YTD change with over 1000%
-increase. In contrast, Bitcoin and Litecoin has the lowest YTD change.
+![](README_files/figure-gfm/market%20barplot-1.png)<!-- -->
+
+From the graph we can see that Dogecoin has the highest YTD change by
+far, with approximately 3500% increase. Cardano also has a large YTD
+change with over 1000% increase. In contrast, Bitcoin and Litecoin have
+the lowest YTD change.
+
+## Bitcoin Performance
+
+Next, we can focus on the Bitcoin data. We can get daily volume and
+price data using the `getAggregates` function. We will get the 1 year
+data ending on “2021-09-30” since that would give us 4 complete
+quarters. We can then derive variables and generate figures.
+
+``` r
+# Use the cryptoAPI function to get the 1 year data for Bitcoin
+bitcoinData <- cryptoAPI("getAggregates", name="Bitcoin", date="2021-09-30")
+
+# Categorize each day as "Gain" or "Loss" and calculate the percent change 
+bitcoinData$dayPerformance <- ifelse(bitcoinData$priceClose - bitcoinData$priceOpen >= 0, "Gain", "Loss")
+bitcoinData$dayChange <- (bitcoinData$priceClose - bitcoinData$priceOpen) / bitcoinData$priceOpen
+```
+
+### Volume by Quarter
+
+Now that we have calculated the day performance (Gain or Loss), we can
+can create a boxplot of the volume by quarter, with day gain and losses
+as different colors.
+
+``` r
+ggplot(bitcoinData, aes(quarter, volume/1000)) +
+   geom_boxplot(size=1) +
+   geom_jitter(aes(y=volume/1000, col=dayPerformance), size=2) +
+   theme(text=element_text(size=14), 
+         panel.grid.major = element_line(size=1.5),
+         axis.ticks = element_line(size=1.4),
+         axis.ticks.length = unit(0.20, 'cm')) +
+   scale_color_manual(values = c("Gain" = "lightgreen", "Loss" = "red")) +
+   labs(title = "Bitcoin Trading Volume by Quarter",
+        x="Quarter", y="Volume (Thousands)", 
+        color="Day Performance")
+```
+
+![](README_files/figure-gfm/Bitcoin%20boxplots-1.png)<!-- -->
+
+From the boxplot we can see that the average volume is the highest in Q1
+of 2021, with Q3 of 2021 having the least volume. The day performance of
+gains and losses are fairly spread out. We can see that there are some
+outliers in each quarter.
+
+### Price with Volume
+
+Next, we can look at how the Bitcoin price and volume behave together.
+
+``` r
+ggplot(bitcoinData) +   
+   geom_line(aes(x=date, y=priceClose, stat="identity")) +
+   geom_bar(aes(x=date, y=volume/8, fill=dayPerformance), stat="identity") +
+   scale_y_continuous(sec.axis = sec_axis(~ .*.008, name="Volume (Thousands)")) +
+   scale_fill_manual(values = c("Gain" = "lightgreen", "Loss" = "red")) +
+   labs(title="Bitcoin Price and Volume Chart",
+        y="Price ($)", 
+        fill="Day Performance")
+```
+
+    ## Warning: Ignoring unknown aesthetics: stat
+
+![](README_files/figure-gfm/Bitcoin%20price%20by%20volume%20plot-1.png)<!-- -->
+
+From the chart we can see that from Oct 2020 to Jan 2021, as the volume
+was increasing, the price was also increasing. We can also see the two
+tallest red ticks, one in Jan 2021 and another in May 2021. These were
+followed by big price drop.
+
+### Daily Price Change
+
+We can examine the distribution of the daily % gains and losses. One way
+to visualize this is to create a histogram.
+
+``` r
+ggplot(bitcoinData, aes(x=dayChange, fill=..x..)) + 
+   geom_histogram(binwidth=0.01) +
+   scale_x_continuous(labels = scales::percent) +
+   scale_fill_gradient(low="red", high="green", labels = scales::percent) +
+   labs(title="Histogram of Daily Price Change (%)", 
+        x="Day Change",
+        y="Count",
+        fill="")
+```
+
+![](README_files/figure-gfm/Bitcoin%20Histogram-1.png)<!-- -->
+
+From the histogram we can see that the distribution looks approximately
+normal, centered at 0%. With the Bitcoin price going from $10,000 to
+over $40,000 in a year, we might expect more Day Change to be positive,
+but the distribution looks quite balanced.
 
 ## Bitcoin vs Ethereum
 
@@ -467,27 +597,40 @@ Ethereum, the second largest cryptocurrency by market cap, is often
 compared to Bitcoin. As of 2021-10-02, Bitcoin has a market cap of $900
 million, while Ethereum has a market cap of $400 million. We can first
 look at the performance of the two cryptocurrencies over the past year.
-We will grab the 1 year data ending on “2021-09-30” from the API, since
-that would give us 4 complete quarters.
+Again, we will grab the 1 year data ending on “2021-09-30” from the API,
+since that would give us 4 complete quarters.
 
 ``` r
-bitcoinData <- cryptoAPI("getAggregates", name="Bitcoin", date="2021-09-30")
+# Use the cryptoAPI function to obtain Ethereum data
 ethereumData <- cryptoAPI(6, name="Ethereum", date="2021-09-30")
 
-calcPerformance <- function(price){
+# Categorize each day as "Gain" or "Loss" and calculate the percent change 
+ethereumData$dayPerformance <- ifelse(ethereumData$priceClose - ethereumData$priceOpen >= 0, "Gain", "Loss")
+ethereumData$dayChange <- (ethereumData$priceClose - ethereumData$priceOpen) / ethereumData$priceOpen
+```
 
+### 1-Year Performance
+
+We can compare the performance of Bitcoin and Ethereum by calculating
+the price change of 1, 7, 30 days and 1 year.
+
+``` r
+# Function to calculate the 1, 7, 30 day and the 1 year price change
+calcPerformance <- function(price){
+   
+   # Calculate change and present in percentages
    change1Day <- scales::percent((price[365] - price[364]) / price[364], accuracy=0.1)
    change7Day <- scales::percent((price[365] - price[358]) / price[358], accuracy=0.1)
    change30Day <-scales::percent((price[365] - price[335]) / price[335], accuracy=0.1)
    changeYear <- scales::percent((price[365] - price[1]) / price[1], accuracy=0.1)
    
-   scales::label_percent(c(change1Day, change7Day))
-   
+   # Name the columns
    performanceData <- cbind(price = price[365], '24h %' = change1Day, '7d %' = change7Day, '30d %' = change30Day, 'yr %' = changeYear)
    
    return(performanceData)
 }
 
+# Call the function and present the combined table
 bitcoinPerformance <- cbind(cryptocurrency = "Bitcoin", calcPerformance(bitcoinData$priceClose))
 ethereumPerformance <- cbind(cryptocurrency = "Ethereum", calcPerformance(ethereumData$priceClose))
 
@@ -499,98 +642,117 @@ kable(rbind(bitcoinPerformance, ethereumPerformance))
 | Bitcoin        | 43770.97 | 5.4%  | \-2.5% | \-7.1%  | 312.3% |
 | Ethereum       | 3000.28  | 5.3%  | \-4.9% | \-12.5% | 749.9% |
 
+### Number of Days of Gains vs Losses
+
+We can also calculate the number of days of gains and losses by quarter.
+We can do that by creating a contingency table.
+
 ``` r
 bitcoinData$cryptoCurrency <- "Bitcoin"
 ethereumData$cryptoCurrency <- "Ethereum"
 
 combinedData <- rbind(bitcoinData, ethereumData)
-combinedData$dayPerformance <- ifelse(combinedData$priceClose - combinedData$priceOpen >= 0, "Gain", "Loss")
-combinedData$dayChange <- scales::percent((combinedData$priceClose - combinedData$priceOpen) / combinedData$priceOpen, accuracy=0.01)
 
+# Create a 3 way contingency table
+dayPerformance <- table(combinedData$quarter, combinedData$dayPerformance, combinedData$cryptoCurrency)
 
-table(combinedData$quarter, combinedData$dayPerformance, combinedData$cryptoCurrency)
+# Present the tables
+kable(dayPerformance[, , 1], caption = "Bitcoin: Days of Gains and Losses by Quarter")
 ```
 
-    ## , ,  = Bitcoin
-    ## 
-    ##          
-    ##           Gain Loss
-    ##   2020 Q4   60   32
-    ##   2021 Q1   51   39
-    ##   2021 Q2   41   50
-    ##   2021 Q3   48   44
-    ## 
-    ## , ,  = Ethereum
-    ## 
-    ##          
-    ##           Gain Loss
-    ##   2020 Q4   55   37
-    ##   2021 Q1   53   37
-    ##   2021 Q2   52   39
-    ##   2021 Q3   52   40
+|         | Gain | Loss |
+| :------ | ---: | ---: |
+| 2020 Q4 |   60 |   32 |
+| 2021 Q1 |   51 |   39 |
+| 2021 Q2 |   41 |   50 |
+| 2021 Q3 |   48 |   44 |
+
+Bitcoin: Days of Gains and Losses by Quarter
 
 ``` r
-ggplot(filter(combinedData, cryptoCurrency=="Bitcoin"), aes(quarter, volume)) +
-   geom_boxplot(size=1) +
-   geom_jitter(aes(y=volume, fill=dayPerformance, color=dayPerformance), size=2) +
-   labs(title="Boxplot for Bitcoin Trading Volume by Quarter") +
-   theme(text=element_text(size=16), 
-         panel.grid.major = element_line(size=1.5),
-         axis.ticks = element_line(size=1.4),
-         axis.ticks.length = unit(0.20, 'cm')) +
-   scale_color_manual(values = c("Gain" = "lightgreen", "Loss" = "red"))
+kable(dayPerformance[, , 2], caption = "Ethereum: Days of Gains and Losses by Quarter")
 ```
 
-![](README_files/figure-gfm/boxplots-1.png)<!-- -->
+|         | Gain | Loss |
+| :------ | ---: | ---: |
+| 2020 Q4 |   55 |   37 |
+| 2021 Q1 |   53 |   37 |
+| 2021 Q2 |   52 |   39 |
+| 2021 Q3 |   52 |   40 |
+
+Ethereum: Days of Gains and Losses by Quarter
+
+Now we have seen the data in the contingency table, we could also
+visualize it with bar plots.
 
 ``` r
-ggplot(filter(combinedData, cryptoCurrency=="Ethereum"), aes(quarter, volume)) +
-   geom_boxplot(size=1) +
-   geom_jitter(aes(y=volume, fill=dayPerformance, color=dayPerformance), size=2) +
-   labs(title="Boxplot for Ethereum Trading Volume by Quarter") +
-   theme(text=element_text(size=16), 
-         panel.grid.major = element_line(size=1.5),
-         axis.ticks = element_line(size=1.4),
-         axis.ticks.length = unit(0.20, 'cm')) +
-   scale_color_manual(values = c("Gain" = "lightgreen", "Loss" = "red"))
+ggplot(combinedData, aes(x=quarter, fill=dayPerformance)) +
+   geom_bar(stat="count", position="dodge") +
+   scale_fill_manual(values = c("Gain" = "lightgreen", "Loss" = "red")) +
+   theme(text=element_text(size=12)) +
+   labs(title="Number of Days of Gains and Losses by Quarter", 
+        x = "Quarter",
+        y="Number of Days",
+        fill="Day Performance") +
+   facet_grid(~ cryptoCurrency) 
 ```
 
-![](README_files/figure-gfm/boxplots-2.png)<!-- -->
+![](README_files/figure-gfm/BTC%20ETH%20Barplot-1.png)<!-- -->
+
+From the bar plot, we can see that Bitcoin has much more days of gains
+than losses in 2020 Q4, but there are more days of losses than gains in
+2021 Q2. For Ethereum, the pattern is pretty much the same, with more
+days of gains than losses.
+
+### Correlation
+
+The price of cryptocurrencies often move together as a market. We can
+analyze the correlation between Bitcoin and Ethereum. First, we will
+generate a scatterplot.
 
 ``` r
+# Build data used for scatterplot 
 scatterData <- data.frame(quarter = bitcoinData$quarter, bitcoin = bitcoinData$priceClose, ethereum = ethereumData$priceClose)
 
 ggplot(scatterData, aes(x=ethereum, y=bitcoin)) +
    geom_point(aes(col=quarter)) + 
-   geom_smooth(method=lm)
+   geom_smooth(method=lm) + 
+   labs(title="Scatterplot of Bitcoin vs Ethereum from 2020-10-01 to 2021-09-30", 
+        x="Ethereum Price ($)", 
+        y="Bitcoin Price ($)",
+        col="Quarter")
 ```
 
     ## `geom_smooth()` using formula 'y ~ x'
 
-![](README_files/figure-gfm/correlation-1.png)<!-- -->
+![](README_files/figure-gfm/correlation%20plot-1.png)<!-- -->
+
+From the scatterplot, we can see that for many of the quarters, the
+points are in clusters. This suggests that the price move closely
+together at least within the quarter. We do see a positive correlation.
 
 ``` r
-R <- cor(x=scatterData$bitcoin, y=scatterData$ethereum)
-R2 <- R^2
+# Calculate correlation coefficient
+r <- cor(x=scatterData$bitcoin, y=scatterData$ethereum)
+r2 <- R^2
 
-correlation <- data.frame(R=R, R2=R2)
+# Format and present the table
+correlation <- data.frame(r=r, r2=r2)
 kable(correlation, digits=4)
 ```
 
-|      R |    R2 |
+|      r |    r2 |
 | -----: | ----: |
 | 0.7443 | 0.554 |
 
-``` r
-ggplot(filter(combinedData, cryptoCurrency=="Bitcoin")) +   
-   geom_line(aes(x=date, y=priceClose, stat="identity")) +
-   geom_bar(aes(x=date, y=volume/8, fill=dayPerformance), stat="identity") +
-   scale_y_continuous(sec.axis = sec_axis(~ .*8, name="Volume")) +
-   scale_fill_manual(values = c("Gain" = "lightgreen", "Loss" = "red"))
-```
-
-    ## Warning: Ignoring unknown aesthetics: stat
-
-![](README_files/figure-gfm/price%20by%20volume%20plot-1.png)<!-- -->
+We can calculate the correlation coefficient (r). With r=0.7443, we can
+say that the price of Bitcoin and Ethereum have a fairly strong positive
+linear relationship within the year.
 
 # Conclusion
+
+We have gone through different functions to help you retrieve data from
+calling the crypto API. We also looked at how these functions and data
+can be used in data exploration and analysis. Hopefully you have learned
+how to use the API functions and use them as tools to play around with
+crypto data\!
