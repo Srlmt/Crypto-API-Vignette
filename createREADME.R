@@ -1,5 +1,5 @@
 # Author: Joey Chen 
-# Date: 10/1/2021
+# Date: 10/5/2021
 # Description: This program renders Crypto_Vignette and outputs the README.md file
 
 rmarkdown::render("Crypto-Vignette.Rmd", 

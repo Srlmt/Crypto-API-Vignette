@@ -258,7 +258,7 @@ kable(getPreviousClose("ETHUSD"))
 
 | ticker   |   volume | priceOpen | priceClose | priceLowest | priceHighest |
 | :------- | -------: | --------: | ---------: | ----------: | -----------: |
-| X:ETHUSD | 241097.7 |  3419.666 |     3387.2 |      3268.4 |       3441.3 |
+| X:ETHUSD | 232174.2 |   3386.88 |     3515.7 |     3364.74 |      3548.19 |
 
 ## (6) `getAggregates`
 
@@ -467,7 +467,7 @@ marketData <- merge(marketBaseline, marketCurrent, by="ticker") %>%
                                 ifelse(ticker=="X:XRPUSD", "XRP",
                                 ifelse(ticker=="X:DOGEUSD", "Dogecoin",
                                 ifelse(ticker=="X:LTCUSD", "Litecoin", "Check Ticker")))))))
-# Show data
+# Display data
 kable(marketData)
 ```
 
@@ -485,9 +485,15 @@ Now we can visualize the data by creating a bar plot of the YTD change.
 ``` r
 ggplot(marketData, aes(x=cryptoCurrency, y=pctChange, fill=cryptoCurrency)) +
    geom_bar(stat="identity") +
+   
+   # Show y-axis as percent
    scale_y_continuous(labels = scales::percent) +
+   
+   # Enlarge text and remove legend
    theme(text=element_text(size=12),
          legend.position = "none") +
+   
+   # Change labels
    labs(title="YTD Price Change as of 2021-09-30 in 6 Top Cryptocurrencies", 
         y="YTD % Change")
 ```
@@ -501,10 +507,12 @@ the lowest YTD change.
 
 ## Bitcoin Performance
 
+<img src="images/Bitcoin.jpg" width="1280" />
+
 Next, we can focus on the Bitcoin data. We can get daily volume and
-price data using the `getAggregates` function. We will get the 1 year
-data ending on “2021-09-30” since that would give us 4 complete
-quarters. We can then derive variables and generate figures.
+price data using the `getAggregates` function from the wrapper. We will
+get the 1 year data ending on “2021-09-30” since that would give us 4
+complete quarters. We can then derive variables and generate figures.
 
 ``` r
 # Use the cryptoAPI function to get the 1 year data for Bitcoin
@@ -517,19 +525,52 @@ bitcoinData$dayChange <- (bitcoinData$priceClose - bitcoinData$priceOpen) / bitc
 
 ### Volume by Quarter
 
-Now that we have calculated the day performance (Gain or Loss), we can
-can create a boxplot of the volume by quarter, with day gain and losses
-as different colors.
+We can start by examining the Bitcoin trading volume over the 4
+quarters. We can generate a numeric summary.
+
+``` r
+# Create numeric summary using dplyr
+volume_summary <- bitcoinData %>% 
+                     group_by(quarter) %>%
+                     summarize(min = min(volume),
+                               q1 = quantile(volume, 0.25),
+                               median = median(volume),
+                               mean = mean(volume),
+                               q3 = quantile(volume, 0.75),
+                               max = max(volume))
+
+# Display data and remove decimals
+kable(volume_summary, digits=0)
+```
+
+| quarter |   min |    q1 | median |  mean |    q3 |    max |
+| :------ | ----: | ----: | -----: | ----: | ----: | -----: |
+| 2020 Q4 | 16890 | 43435 |  57048 | 65067 | 82908 | 199488 |
+| 2021 Q1 | 36585 | 57689 |  68107 | 80989 | 92432 | 242840 |
+| 2021 Q2 | 20409 | 40385 |  47613 | 56088 | 61891 | 260505 |
+| 2021 Q3 |  9190 | 17987 |  22138 | 24708 | 26372 |  75800 |
+
+We can visualize this data by creating a boxplot. Since we have
+calculated the day performance (Gain or Loss), we can incorporate that
+into the plot, with day gain and losses as different colors.
 
 ``` r
 ggplot(bitcoinData, aes(quarter, volume/1000)) +
    geom_boxplot(size=1) +
+   
+   # Change volume units to Thousands for readability
    geom_jitter(aes(y=volume/1000, col=dayPerformance), size=2) +
+   
+   # Modify text size and axis details
    theme(text=element_text(size=14), 
          panel.grid.major = element_line(size=1.5),
          axis.ticks = element_line(size=1.4),
          axis.ticks.length = unit(0.20, 'cm')) +
+   
+   # Change color of gains and losses to reflect market colors
    scale_color_manual(values = c("Gain" = "lightgreen", "Loss" = "red")) +
+   
+   # Change labels
    labs(title = "Bitcoin Trading Volume by Quarter",
         x="Quarter", y="Volume (Thousands)", 
         color="Day Performance")
@@ -548,23 +589,30 @@ Next, we can look at how the Bitcoin price and volume behave together.
 
 ``` r
 ggplot(bitcoinData) +   
-   geom_line(aes(x=date, y=priceClose, stat="identity")) +
+   geom_line(aes(x=date, y=priceClose)) +
+   
+   # Create overlapping bar graph and scale the y-axis
    geom_bar(aes(x=date, y=volume/8, fill=dayPerformance), stat="identity") +
+   
+   # Create a second axis for volume
+   # The 0.008 scales the axis in such a way that it fits with the line plot
    scale_y_continuous(sec.axis = sec_axis(~ .*.008, name="Volume (Thousands)")) +
+   
+   # Change color of gains and losses to reflect market colors
    scale_fill_manual(values = c("Gain" = "lightgreen", "Loss" = "red")) +
+   
+   # Change labels
    labs(title="Bitcoin Price and Volume Chart",
         y="Price ($)", 
         fill="Day Performance")
 ```
 
-    ## Warning: Ignoring unknown aesthetics: stat
-
 ![](README_files/figure-gfm/Bitcoin%20price%20by%20volume%20plot-1.png)<!-- -->
 
 From the chart we can see that from Oct 2020 to Jan 2021, as the volume
 was increasing, the price was also increasing. We can also see the two
-tallest red ticks, one in Jan 2021 and another in May 2021. These were
-followed by big price drop.
+tallest red ticks for volume, one in Jan 2021 and another in May 2021 -
+these were followed by huge price drop.
 
 ### Daily Price Change
 
@@ -574,8 +622,14 @@ to visualize this is to create a histogram.
 ``` r
 ggplot(bitcoinData, aes(x=dayChange, fill=..x..)) + 
    geom_histogram(binwidth=0.01) +
+   
+   # Show x-axis as percent
    scale_x_continuous(labels = scales::percent) +
+   
+   # Change color of gradient to reflect market colors
    scale_fill_gradient(low="red", high="green", labels = scales::percent) +
+   
+   # Change labels
    labs(title="Histogram of Daily Price Change (%)", 
         x="Day Change",
         y="Count",
@@ -595,13 +649,14 @@ but the distribution looks quite balanced.
 
 Ethereum, the second largest cryptocurrency by market cap, is often
 compared to Bitcoin. As of 2021-10-02, Bitcoin has a market cap of $900
-million, while Ethereum has a market cap of $400 million. We can first
+billion, while Ethereum has a market cap of $400 billion. We can first
 look at the performance of the two cryptocurrencies over the past year.
 Again, we will grab the 1 year data ending on “2021-09-30” from the API,
 since that would give us 4 complete quarters.
 
 ``` r
 # Use the cryptoAPI function to obtain Ethereum data
+# We already have the Bitcoin data from previous section
 ethereumData <- cryptoAPI(6, name="Ethereum", date="2021-09-30")
 
 # Categorize each day as "Gain" or "Loss" and calculate the percent change 
@@ -634,13 +689,20 @@ calcPerformance <- function(price){
 bitcoinPerformance <- cbind(cryptocurrency = "Bitcoin", calcPerformance(bitcoinData$priceClose))
 ethereumPerformance <- cbind(cryptocurrency = "Ethereum", calcPerformance(ethereumData$priceClose))
 
-kable(rbind(bitcoinPerformance, ethereumPerformance))
+# Display data
+kable(rbind(bitcoinPerformance, ethereumPerformance), caption="1-Year Performance: Bitcoin vs Ethereum ")
 ```
 
 | cryptocurrency | price    | 24h % | 7d %   | 30d %   | yr %   |
 | :------------- | :------- | :---- | :----- | :------ | :----- |
 | Bitcoin        | 43770.97 | 5.4%  | \-2.5% | \-7.1%  | 312.3% |
 | Ethereum       | 3000.28  | 5.3%  | \-4.9% | \-12.5% | 749.9% |
+
+1-Year Performance: Bitcoin vs Ethereum
+
+From the table We can see that in the short term, the performances are
+similar. However, over 1 year, Ethereum price increased 750%, which is
+more than twice of Bitcoin’s increase of 310%.
 
 ### Number of Days of Gains vs Losses
 
@@ -651,6 +713,7 @@ We can do that by creating a contingency table.
 bitcoinData$cryptoCurrency <- "Bitcoin"
 ethereumData$cryptoCurrency <- "Ethereum"
 
+# Combine Bitcoin and Ethereum data
 combinedData <- rbind(bitcoinData, ethereumData)
 
 # Create a 3 way contingency table
@@ -682,18 +745,28 @@ kable(dayPerformance[, , 2], caption = "Ethereum: Days of Gains and Losses by Qu
 
 Ethereum: Days of Gains and Losses by Quarter
 
-Now we have seen the data in the contingency table, we could also
+Now we have seen the data in the contingency tables, we could also
 visualize it with bar plots.
 
 ``` r
 ggplot(combinedData, aes(x=quarter, fill=dayPerformance)) +
+   
+   # Place the bars side-by-side
    geom_bar(stat="count", position="dodge") +
+   
+   # Change color of gradient to reflect market colors
    scale_fill_manual(values = c("Gain" = "lightgreen", "Loss" = "red")) +
+   
+   # Enlarge text
    theme(text=element_text(size=12)) +
+   
+   # Change labels
    labs(title="Number of Days of Gains and Losses by Quarter", 
         x = "Quarter",
         y="Number of Days",
         fill="Day Performance") +
+   
+   # Display Bitcoin and Ethereum separately 
    facet_grid(~ cryptoCurrency) 
 ```
 
@@ -701,8 +774,8 @@ ggplot(combinedData, aes(x=quarter, fill=dayPerformance)) +
 
 From the bar plot, we can see that Bitcoin has much more days of gains
 than losses in 2020 Q4, but there are more days of losses than gains in
-2021 Q2. For Ethereum, the pattern is pretty much the same, with more
-days of gains than losses.
+2021 Q2. For Ethereum, the pattern is more consistent, with more days of
+gains than losses in each quarter.
 
 ### Correlation
 
@@ -714,9 +787,16 @@ generate a scatterplot.
 # Build data used for scatterplot 
 scatterData <- data.frame(quarter = bitcoinData$quarter, bitcoin = bitcoinData$priceClose, ethereum = ethereumData$priceClose)
 
+
 ggplot(scatterData, aes(x=ethereum, y=bitcoin)) +
+   
+   # Have each quarter as different color
    geom_point(aes(col=quarter)) + 
+   
+   # Add regression line
    geom_smooth(method=lm) + 
+   
+   # Change labels
    labs(title="Scatterplot of Bitcoin vs Ethereum from 2020-10-01 to 2021-09-30", 
         x="Ethereum Price ($)", 
         y="Bitcoin Price ($)",
@@ -729,12 +809,13 @@ ggplot(scatterData, aes(x=ethereum, y=bitcoin)) +
 
 From the scatterplot, we can see that for many of the quarters, the
 points are in clusters. This suggests that the price move closely
-together at least within the quarter. We do see a positive correlation.
+together at least within the quarter. We do see a positive correlation,
+but we can calculate the correlation coefficient (r) to confirm.
 
 ``` r
 # Calculate correlation coefficient
 r <- cor(x=scatterData$bitcoin, y=scatterData$ethereum)
-r2 <- R^2
+r2 <- r^2
 
 # Format and present the table
 correlation <- data.frame(r=r, r2=r2)
@@ -745,9 +826,8 @@ kable(correlation, digits=4)
 | -----: | ----: |
 | 0.7443 | 0.554 |
 
-We can calculate the correlation coefficient (r). With r=0.7443, we can
-say that the price of Bitcoin and Ethereum have a fairly strong positive
-linear relationship within the year.
+With r=0.7443, we can say that the price of Bitcoin and Ethereum have a
+fairly strong positive linear relationship within the year.
 
 # Conclusion
 
